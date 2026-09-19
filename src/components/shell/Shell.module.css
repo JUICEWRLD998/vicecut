@@ -1,0 +1,71 @@
+.shell {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--c-base);
+  isolation: isolate;
+}
+
+/* --- overlay stack ------------------------------------------------------
+   Default scope is "local": these layers fill the nearest positioned ancestor,
+   so a nested instance grades its own pane rather than the whole page. Only
+   data-scope="viewport" pins to the window, which is what page-level grading
+   needs (a fixed vignette must not stretch over a tall document).
+
+   `fixed` here once leaked a nested demo instance across the entire viewport. */
+
+.grain,
+.vignette,
+.scanlines {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-overlay);
+  pointer-events: none;
+}
+
+.grain[data-scope="viewport"],
+.vignette[data-scope="viewport"],
+.scanlines[data-scope="viewport"] {
+  position: fixed;
+}
+
+/* Seeded turbulence, drawn once. Fixed seed = deterministic across runs. */
+.grain {
+  opacity: 0.038;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+}
+
+.shell[data-intensity="light"] .grain {
+  opacity: 0.022;
+}
+
+.vignette {
+  background: radial-gradient(
+    ellipse 78% 68% at 50% 48%,
+    rgba(0, 0, 0, 0) 38%,
+    rgba(0, 0, 0, 0.24) 72%,
+    rgba(0, 0, 0, 0.62) 100%
+  );
+}
+
+.shell[data-intensity="light"] .vignette {
+  background: radial-gradient(
+    ellipse 84% 74% at 50% 48%,
+    rgba(0, 0, 0, 0) 46%,
+    rgba(0, 0, 0, 0.14) 78%,
+    rgba(0, 0, 0, 0.4) 100%
+  );
+}
+
+.scanlines {
+  z-index: calc(var(--z-overlay) + 1);
+  opacity: 0.05;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(237, 232, 221, 0.5) 0px,
+    rgba(237, 232, 221, 0.5) 1px,
+    rgba(0, 0, 0, 0) 1px,
+    rgba(0, 0, 0, 0) 6px
+  );
+}

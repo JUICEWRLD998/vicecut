@@ -1,0 +1,26 @@
+.rule {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  width: 100%;
+}
+
+.line {
+  flex: 1;
+  height: var(--rule);
+  background: var(--c-line);
+}
+
+.accent .line {
+  background: var(--c-accent-line);
+}
+
+.label {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: var(--track-meta);
+  text-transform: uppercase;
+  color: var(--c-muted);
+  font-variant-numeric: tabular-nums;
+}

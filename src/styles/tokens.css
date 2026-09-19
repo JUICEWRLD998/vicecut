@@ -1,0 +1,105 @@
+/*
+ * VICE CUT — design tokens.
+ *
+ * The single source of truth for colour, type, space and motion. Components read
+ * these; nothing hard-codes a hex.
+ *
+ * Contrast is measured, not eyeballed. Every pair marked "AA" below is verified
+ * by `node scripts/contrast.mjs`, which also carries a planted control that must
+ * fail — if it ever passes, the checker is blind.
+ *
+ * This is a single-look, dark-first interface (a night-time mission director).
+ * There is deliberately no light theme: the scene imagery is night, and a light
+ * variant would fight it. The `color-scheme` declaration below keeps form
+ * controls dark so no native widget flashes white.
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* ---- surfaces ------------------------------------------------------- */
+  --c-base: #090a0c; /* asphalt, page background */
+  --c-surface-1: #111316; /* raised panel */
+  --c-surface-2: #16181c; /* controls on a panel */
+  --c-surface-3: #1d2025; /* hover / active control */
+  --c-line: rgba(237, 232, 221, 0.12); /* hairline rule */
+  --c-line-strong: rgba(237, 232, 221, 0.28);
+
+  /* ---- text ----------------------------------------------------------- */
+  /* paper on base ............ 16.21:1  AA */
+  --c-paper: #ede8dd;
+  /* muted on base ............  5.87:1  AA (not for body copy < 14px) */
+  --c-muted: #8c8c88;
+  /* muted-hi on base .........  8.29:1  AA */
+  --c-muted-hi: #a8a8a3;
+
+  /* ---- accent --------------------------------------------------------- */
+  /* base on coral ............  6.56:1  AA  — primary button label */
+  /* coral on base ............  6.56:1  AA  — accent text */
+  /* coral on surface-1 .......  6.16:1  AA */
+  --c-accent: #ff5a72;
+  --c-accent-dim: rgba(255, 90, 114, 0.14);
+  --c-accent-line: rgba(255, 90, 114, 0.42);
+
+  /* ---- support -------------------------------------------------------- */
+  /* amber on base ............ 11.18:1  AA */
+  --c-amber: #ffb35c;
+  /* cyan on base ............. 11.67:1  AA */
+  --c-cyan: #55d8e8;
+
+  /* Reserved for the live CCTV / surveillance treatment only. Outside that one
+     surface it reads as a sci-fi cliché, so it stays scoped. */
+  --c-signal: #7bd88f;
+
+  /* NOTE: paper on coral is 2.47:1 and FAILS. Coral is a fill, never a surface
+     for off-white text. Use --c-base for labels on coral. */
+
+  /* ---- type ----------------------------------------------------------- */
+  /* Chosen in Phase 2: Editorial Condensed. Archivo carries both wdth and
+     wght, so the condensed cut is tunable per surface rather than fixed. */
+  --font-display: var(--font-archivo), "Arial Narrow", Impact, sans-serif;
+  --font-ui: var(--font-instrument), Inter, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
+
+  /* Display width axis. 76 is the wordmark; surfaces where the type must read
+     as UI rather than masthead relax toward 100. */
+  --wdth-display: 76;
+  --wdth-tight: 84;
+  --wdth-ui: 100;
+
+  --track-display: -0.018em;
+  --track-meta: 0.18em; /* monospace micro-labels */
+  --track-button: 0.14em;
+
+  /* ---- space ---------------------------------------------------------- */
+  /* 4px base. Named by intent, not by index, so a number in a component says
+     what it is for. */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+  --s-9: 96px;
+  --s-10: 144px;
+
+  /* ---- motion --------------------------------------------------------- */
+  /* Per the brief: 150-250ms for UI, 400-800ms for scene transitions. */
+  --t-ui: 180ms;
+  --t-ui-slow: 240ms;
+  --t-scene: 560ms;
+  --t-scene-slow: 800ms;
+
+  /* Directional, never springy: no bounce, no overshoot. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* ---- misc ----------------------------------------------------------- */
+  --z-hud: 20;
+  --z-overlay: 40;
+  --z-editor: 60;
+  --bracket: 18px; /* corner bracket arm length */
+  --rule: 1px;
+}

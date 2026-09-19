@@ -1,0 +1,53 @@
+.frame {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.bracket {
+  position: absolute;
+  width: var(--bracket-size);
+  height: var(--bracket-size);
+  pointer-events: none;
+}
+
+/* Two hairlines per corner, drawn with borders on a transparent box. */
+.line {
+  --bracket-colour: var(--c-line-strong);
+}
+
+.accent {
+  --bracket-colour: var(--c-accent);
+}
+
+.paper {
+  --bracket-colour: var(--c-paper);
+}
+
+.tl {
+  top: 0;
+  left: 0;
+  border-top: var(--rule) solid var(--bracket-colour);
+  border-left: var(--rule) solid var(--bracket-colour);
+}
+
+.tr {
+  top: 0;
+  right: 0;
+  border-top: var(--rule) solid var(--bracket-colour);
+  border-right: var(--rule) solid var(--bracket-colour);
+}
+
+.bl {
+  bottom: 0;
+  left: 0;
+  border-bottom: var(--rule) solid var(--bracket-colour);
+  border-left: var(--rule) solid var(--bracket-colour);
+}
+
+.br {
+  bottom: 0;
+  right: 0;
+  border-bottom: var(--rule) solid var(--bracket-colour);
+  border-right: var(--rule) solid var(--bracket-colour);
+}

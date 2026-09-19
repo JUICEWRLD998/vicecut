@@ -1,0 +1,175 @@
+/* Phase 1 harness styling only. Phase 2 replaces this with the design system. */
+
+.page {
+  min-height: 100vh;
+  padding: 28px 32px 48px;
+  background: #090a0c;
+  color: #ede8dd;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+.head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 32px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(237, 232, 221, 0.12);
+}
+
+.kicker {
+  margin: 0 0 6px;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8c8c88;
+}
+
+.title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.status {
+  display: flex;
+  gap: 26px;
+  margin: 0;
+}
+
+.statusStack {
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.status div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.status dt {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8c8c88;
+}
+
+.status dd {
+  margin: 0;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.status dd[data-state="ok"] {
+  color: #ff5a72;
+}
+
+.status dd[data-state="pending"] {
+  color: #ffb35c;
+}
+
+.status dd[data-state="idle"] {
+  color: #8c8c88;
+}
+
+.alert {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-left: 2px solid #ff5a72;
+  background: rgba(255, 90, 114, 0.08);
+  font-size: 13px;
+}
+
+.alert p {
+  margin: 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 22fr 40fr 38fr;
+  gap: 20px;
+  margin-top: 22px;
+  align-items: start;
+}
+
+.pane {
+  min-width: 0;
+}
+
+.paneHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.paneHead h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.meta {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8c8c88;
+}
+
+.img {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #111316;
+}
+
+.editor {
+  border: 1px solid rgba(237, 232, 221, 0.12);
+  background: #111316;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.actions button {
+  flex: 1;
+  padding: 11px 14px;
+  border: 1px solid rgba(237, 232, 221, 0.2);
+  background: transparent;
+  color: #ede8dd;
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.actions button:hover {
+  border-color: #ff5a72;
+  color: #ff5a72;
+}
+
+.empty {
+  padding: 40px 18px;
+  border: 1px dashed rgba(237, 232, 221, 0.16);
+  color: #8c8c88;
+  font-size: 13px;
+  text-align: center;
+}
+
+@media (max-width: 1280px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
