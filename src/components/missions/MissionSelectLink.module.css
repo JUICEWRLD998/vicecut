@@ -1,0 +1,27 @@
+.link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 var(--s-2);
+  border: var(--rule) solid transparent;
+  color: var(--c-muted);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: var(--track-button);
+  text-transform: uppercase;
+  transition:
+    color var(--t-ui) var(--ease-out),
+    border-color var(--t-ui) var(--ease-out);
+}
+
+.link:hover {
+  color: var(--c-paper);
+  border-color: var(--c-line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .link {
+    transition: none;
+  }
+}

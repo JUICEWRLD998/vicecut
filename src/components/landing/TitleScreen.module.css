@@ -1,0 +1,124 @@
+.stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.92;
+}
+
+/* Directional scrim: dark where the type sits, clearing to the right so the
+   scene stays a photograph rather than a backdrop. */
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    rgba(9, 10, 12, 0.95) 0%,
+    rgba(9, 10, 12, 0.84) 32%,
+    rgba(9, 10, 12, 0.34) 62%,
+    rgba(9, 10, 12, 0.08) 100%
+  );
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: var(--s-8) var(--s-8) var(--s-6);
+  max-width: 1100px;
+}
+
+.wordmark {
+  margin: var(--s-5) 0 0;
+}
+
+.sub {
+  display: block;
+  margin-top: var(--s-4);
+}
+
+.tagline {
+  margin-top: var(--s-7);
+}
+
+.bottom {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin-top: auto;
+  padding-top: var(--s-8);
+  max-width: 560px;
+}
+
+.bottomRule {
+  height: var(--rule);
+  background: var(--c-line);
+  margin-bottom: var(--s-2);
+}
+
+.startPrompt {
+  align-self: flex-start;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--track-meta);
+  text-transform: uppercase;
+  color: var(--c-accent);
+  cursor: pointer;
+}
+
+/* A slow, single brightness breath — the only ambient motion on the screen.
+   It reads as a practical light on the water, not as a UI animation. */
+.startPrompt::after {
+  content: "";
+  display: block;
+  height: var(--rule);
+  margin-top: var(--s-2);
+  background: var(--c-accent);
+  transform-origin: left;
+  animation: promptBreath 2.6s var(--ease-in-out) infinite;
+}
+
+@keyframes promptBreath {
+  0%,
+  100% {
+    transform: scaleX(0.24);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+.startHint {
+  padding-top: var(--s-2);
+}
+
+/* Exposure wipe into mission select. */
+.wipe {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: var(--c-paper);
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  .content {
+    padding: var(--s-6) var(--s-5);
+  }
+}

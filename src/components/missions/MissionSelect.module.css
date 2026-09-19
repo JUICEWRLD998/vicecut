@@ -1,0 +1,149 @@
+.stage {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: var(--s-8) var(--s-8) var(--s-7);
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-6);
+  padding-bottom: var(--s-5);
+}
+
+.headTitle {
+  margin-top: var(--s-4);
+}
+
+.headMeta {
+  padding-bottom: var(--s-1);
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-4);
+  flex: 1;
+  min-height: 0;
+  padding-top: var(--s-6);
+}
+
+.tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-height: 420px;
+  overflow: hidden;
+  isolation: isolate;
+  padding: 0;
+  border: var(--rule) solid transparent;
+  background: var(--c-base);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--t-ui) var(--ease-out),
+    transform var(--t-ui) var(--ease-out);
+}
+
+.tile[data-focused="true"] {
+  border-color: var(--c-accent-line);
+  transform: translateY(-4px);
+}
+
+.tile[data-entering="true"] {
+  transform: translateY(-4px) scale(1.012);
+}
+
+.tileImg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Unselected missions are desaturated and held back. Selection is what
+     restores the colour, so focus is legible without an outline. */
+  filter: grayscale(0.55) brightness(0.62);
+  transition: filter var(--t-ui-slow) var(--ease-out);
+}
+
+.tile[data-focused="true"] .tileImg {
+  filter: grayscale(0) brightness(0.88);
+}
+
+.tileScrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(9, 10, 12, 0.97) 0%,
+    rgba(9, 10, 12, 0.68) 38%,
+    rgba(9, 10, 12, 0.16) 78%,
+    rgba(9, 10, 12, 0.34) 100%
+  );
+}
+
+.tileBody {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  margin-top: auto;
+  padding: var(--s-5);
+  gap: var(--s-2);
+}
+
+.tileName {
+  margin: var(--s-1) 0 var(--s-2);
+}
+
+.tileMeta {
+  display: block;
+}
+
+.tileFoot {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-3) var(--s-5);
+  border-top: var(--rule) solid var(--c-line);
+}
+
+/* The confirm prompt is inert until the tile has focus. */
+.tileFoot > :first-child {
+  opacity: 0;
+  transition: opacity var(--t-ui) var(--ease-out);
+}
+
+.tile[data-focused="true"] .tileFoot > :first-child {
+  opacity: 1;
+}
+
+.wipe {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: var(--c-paper);
+  pointer-events: none;
+}
+
+@media (max-width: 1100px) {
+  .stage {
+    padding: var(--s-6) var(--s-5);
+  }
+  .tiles {
+    grid-template-columns: 1fr;
+  }
+  .tile {
+    min-height: 260px;
+  }
+}
