@@ -24,16 +24,21 @@
   gap: var(--s-4);
 }
 
-/* The editor is the whole screen; it must not be letterboxed by padding. */
+/* The editor is the whole screen; it must not be letterboxed by padding.
+   Must be a flex column, not a plain block. The editor's own wrapper carries
+   inline `flex: 1 1 0%; display: flex; min-height: 100%`, i.e. it expects a flex
+   parent to size it. Against a block parent that `flex` is inert and the wrapper
+   collapsed to its content, leaving the editor in a 365px band at the top of an
+   854px pane with the rest black — visible in the editor screenshot, and the
+   reason a `> :last-child { height: 100% }` rule was here. That rule never took
+   effect and has been removed rather than left in place as a decoy. */
 .canvas {
   position: relative;
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
   isolation: isolate;
-}
-
-.canvas > :last-child {
-  height: 100%;
 }
 
 .alert {

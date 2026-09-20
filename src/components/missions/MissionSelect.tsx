@@ -87,6 +87,12 @@ export function MissionSelect() {
 
   return (
     <GameShell intensity="light">
+      {/* The world behind the selector. Siblings of <main>, not children: they
+          are fixed page grading, and the stage is a max-width column that would
+          letterbox them on a wide desktop. Both are decorative. */}
+      <div className={styles.ground} aria-hidden="true" />
+      <div className={styles.groundScrim} aria-hidden="true" />
+
       <motion.main
         className={styles.stage}
         initial="hidden"

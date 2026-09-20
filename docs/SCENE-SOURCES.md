@@ -5,7 +5,7 @@ artwork, sourced from Rockstar. `SCENE-BRIEFS.md` is the shot spec that was
 written when these were to be sourced from stock photography; it is kept only
 for the rationale and is superseded by this file.
 
-Only four files, all under `public/scenes/`:
+Five master files, all under `public/scenes/`:
 
 | File | Used by | Source | Size |
 |---|---|---|---|
@@ -13,6 +13,22 @@ Only four files, all under `public/scenes/`:
 | `night-shift.jpg` | Mission 01 · The Night Shift | Vice City screenshot 08 | 3840×2160, 740KB |
 | `southbound.jpg` | Mission 02 · Southbound | Ambrosia screenshot 04 | 3840×2160, 1.1MB |
 | `no-signal.jpg` | Mission 03 · No Signal | Port Gellhorn screenshot 01 | 3840×2160, 812KB |
+| `Jason_and_Lucia_Robbery_landscape.jpg` | Title screen key art (`TITLE_ART`) | Official Cover Art, Jason & Lucia | 3840×2160, 1.6MB |
+
+Two derived sets also ship, both cut from the files above and re-encoded smaller:
+
+| Directory | Used by | Derived from |
+|---|---|---|
+| `public/seq/` | Title → mission-select sequence (6 stills, §22) | Screenshots bundle — Vice City, Ambrosia, Leonida Keys, Mount Kalaga, Port Gellhorn |
+| `public/ground/operation-select.jpg` | `/missions` backdrop, blurred | `public/seq/01-Vice_City_01.jpg`, downscaled to 1100×619 and blurred |
+
+`operation-select.jpg` is the first frame of the sequence, chosen so the backdrop is
+already decoded and in cache by the time `/missions` mounts. It is baked smaller and
+pre-softened rather than being the 1920px seq frame run through a live blur: the blur
+destroys the detail anyway, and a full-viewport CSS blur on a 1920px source is a
+per-frame GPU cost. At 1100×619 it is 43KB, and the compositor only has to upscale it.
+Re-derive with `sharp().resize({width: 1100}).blur(2).jpeg({quality: 80})`.
+
 
 ## Where they came from, and the URLs to re-fetch them
 
