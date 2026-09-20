@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# scratch space — reconnaissance dumps, probe scripts, screenshot sheets and
+# downloaded asset bundles used while working out a change. Never shipped and
+# never committed: .tmp-seq/shots.zip alone is 69MB, and it landed in a commit
+# once because nothing here stopped it.
+.tmp-*/

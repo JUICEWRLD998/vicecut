@@ -64,6 +64,22 @@ export function TitleScreen() {
   }, [start]);
 
   /**
+   * Warm the /missions route while the title is idle.
+   *
+   * Without this, the sequence's own timer is not what the user actually waits
+   * on. Measured on the production build: the timer fires at 3480ms and calls
+   * `router.push`, but the overlay stays mounted until React has the next page
+   * ready — so the final still sat frozen for a further ~2.2s and the whole
+   * thing ran 4.9s. That is a stall, not a transition, and it reads as the app
+   * hanging right at the moment the user commits.
+   *
+   * Prefetching moves that work to a moment when nothing is waiting on it.
+   */
+  useEffect(() => {
+    router.prefetch("/missions");
+  }, [router]);
+
+  /**
    * §33 preloading now happens inside SceneSequence, which warms the mission
    * scenes while the stills play. It used to fire here 250ms after load, which
    * meant three 3840px mission images were competing with the hero art for
