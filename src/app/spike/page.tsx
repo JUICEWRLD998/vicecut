@@ -20,7 +20,7 @@ import styles from "./spike.module.css";
  * so the shape (dataUrl) is the contract, not a local detail.
  */
 
-const SCENE_SRC = "/scenes/night-marina.svg";
+const SCENE_SRC = "/scenes/title-cover.jpg";
 
 /**
  * Module-level so object identity is stable across renders.

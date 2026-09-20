@@ -12,18 +12,20 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.9;
 }
 
+/* Regraded 2026-09-20: was 0.96/0.86/0.46/0.18 over opacity 0.9, which stacked
+   with the shell vignette and deleted the frame. The brief is where the player
+   should see most of the place they are about to edit. */
 .scrim {
   position: absolute;
   inset: 0;
   background: linear-gradient(
     110deg,
-    rgba(9, 10, 12, 0.96) 0%,
-    rgba(9, 10, 12, 0.86) 38%,
-    rgba(9, 10, 12, 0.46) 70%,
-    rgba(9, 10, 12, 0.18) 100%
+    rgba(9, 10, 12, 0.94) 0%,
+    rgba(9, 10, 12, 0.8) 38%,
+    rgba(9, 10, 12, 0.36) 70%,
+    rgba(9, 10, 12, 0.12) 100%
   );
 }
 

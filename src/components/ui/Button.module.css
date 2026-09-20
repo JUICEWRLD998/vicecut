@@ -28,10 +28,13 @@
 
 .hint {
   font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 400;
-  letter-spacing: 0.12em;
-  opacity: 0.62;
+  font-size: 11px;
+  font-weight: 500;
+  /* --track-button (0.14em) rather than the local 0.12em literal: this sits
+     inside a button whose label is already tracked at 0.14em, and the two were
+     visibly out of step. One token, so they cannot drift again. */
+  letter-spacing: var(--track-button);
+  opacity: 0.72;
 }
 
 /* --- solid: the primary action. base on accent = 6.56:1 --- */
@@ -42,13 +45,13 @@
 }
 
 .solid:hover:not(:disabled) {
-  background: #ff7085;
-  border-color: #ff7085;
+  background: var(--c-accent-hi);
+  border-color: var(--c-accent-hi);
 }
 
 .solid:active:not(:disabled) {
-  background: #e84e63;
-  border-color: #e84e63;
+  background: var(--c-accent-lo);
+  border-color: var(--c-accent-lo);
 }
 
 /* --- ghost: secondary. Stays on dark, accent only on hover. --- */

@@ -14,21 +14,31 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.92;
 }
 
-/* Directional scrim: dark where the type sits, clearing to the right so the
-   scene stays a photograph rather than a backdrop. */
+/* The cover plate IS the background, so the scrim has one job: hold the type
+   column down without greying the GTA VI lockup, which sits centred and is the
+   brightest thing in the frame. The old photographic left-to-right ramp reached
+   0.84 by 32% and washed the lockup out to grey before the eye reached it.
+   This clears inside the first half instead, so 44%-62% — where the lockup
+   lives — is untouched, and a separate floor gradient grounds the footer. */
 .scrim {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    100deg,
-    rgba(9, 10, 12, 0.95) 0%,
-    rgba(9, 10, 12, 0.84) 32%,
-    rgba(9, 10, 12, 0.34) 62%,
-    rgba(9, 10, 12, 0.08) 100%
-  );
+  background:
+    linear-gradient(
+      0deg,
+      rgba(9, 10, 12, 0.62) 0%,
+      rgba(9, 10, 12, 0.22) 18%,
+      rgba(9, 10, 12, 0) 34%
+    ),
+    linear-gradient(
+      100deg,
+      rgba(9, 10, 12, 0.88) 0%,
+      rgba(9, 10, 12, 0.6) 26%,
+      rgba(9, 10, 12, 0.1) 44%,
+      rgba(9, 10, 12, 0) 62%
+    );
 }
 
 .content {
@@ -37,12 +47,24 @@
   display: flex;
   flex-direction: column;
   flex: 1;
-  padding: var(--s-8) var(--s-8) var(--s-6);
   max-width: 1100px;
+  padding: var(--s-8) var(--s-8) var(--s-6);
 }
 
+/* The key art carries the type cleanly: Jason and Lucia sit centre-right
+   against an open violet sky, so the whole left column is low-detail. That is
+   what lets the wordmark run at full size again — it was capped to 112px only
+   to clear the GTA VI lockup in the previous cover-plate art.
+
+   Two lines, so the clamp is raised above the shared hero cap and the leading
+   is pulled slightly tighter than the scale's default: wide letterforms stacked
+   at 0.84 read as two separate blocks rather than one masthead. `12.4vw` lands
+   on ~196px at a 1584px viewport, which is the size the rendered comparison
+   was judged at. */
 .wordmark {
   margin: var(--s-5) 0 0;
+  font-size: clamp(72px, 12.4vw, 210px);
+  line-height: 0.82;
 }
 
 .sub {
@@ -106,15 +128,6 @@
 
 .startHint {
   padding-top: var(--s-2);
-}
-
-/* Exposure wipe into mission select. */
-.wipe {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  background: var(--c-paper);
-  pointer-events: none;
 }
 
 @media (max-width: 900px) {

@@ -1,0 +1,17 @@
+<!doctype html><meta charset="utf-8"><body><script>
+    window.__resize = (src) => new Promise((res, rej) => {
+      const i = new Image();
+      i.onload = () => {
+        const c = document.createElement('canvas');
+        c.width = 1920; c.height = 1080;
+        const g = c.getContext('2d');
+        g.imageSmoothingEnabled = true;
+        g.imageSmoothingQuality = 'high';
+        g.drawImage(i, 0, 0, 1920, 1080);
+        res(c.toDataURL('image/jpeg', 0.82).split(',')[1]);
+      };
+      i.onerror = () => rej(new Error('load failed'));
+      i.src = src;
+    });
+    window.__ready = true;
+  </script></body>

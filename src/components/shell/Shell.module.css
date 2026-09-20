@@ -40,21 +40,26 @@
   opacity: 0.022;
 }
 
+/* Softened 2026-09-20. The previous falloff (0 -> 0.24 -> 0.62) was tuned for
+   the hand-drawn SVG scenes, which had almost no luminance range of their own.
+   Against the photographic scenes it stacked with the per-screen scrims and
+   pulled the outer frame to black, so the world read as a flat panel. The clear
+   radius is wider and the falloff lighter; the edge still closes the frame. */
 .vignette {
   background: radial-gradient(
-    ellipse 78% 68% at 50% 48%,
-    rgba(0, 0, 0, 0) 38%,
-    rgba(0, 0, 0, 0.24) 72%,
-    rgba(0, 0, 0, 0.62) 100%
+    ellipse 84% 74% at 50% 48%,
+    rgba(0, 0, 0, 0) 46%,
+    rgba(0, 0, 0, 0.14) 78%,
+    rgba(0, 0, 0, 0.44) 100%
   );
 }
 
 .shell[data-intensity="light"] .vignette {
   background: radial-gradient(
-    ellipse 84% 74% at 50% 48%,
-    rgba(0, 0, 0, 0) 46%,
-    rgba(0, 0, 0, 0.14) 78%,
-    rgba(0, 0, 0, 0.4) 100%
+    ellipse 88% 78% at 50% 48%,
+    rgba(0, 0, 0, 0) 54%,
+    rgba(0, 0, 0, 0.08) 82%,
+    rgba(0, 0, 0, 0.28) 100%
   );
 }
 

@@ -27,8 +27,12 @@ body {
   font-family: var(--font-ui);
   font-size: 16px;
   line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* Deliberately NOT setting -webkit-font-smoothing: antialiased. That value
+     thins strokes, which is the right call for dark text on a light ground and
+     the wrong one here: this is a light-on-dark interface, where it eats the
+     extra stroke weight and is the main reason the type read "soft" on macOS.
+     The platform default renders light text slightly heavier — clearer at
+     every size we use. No effect on Windows/Linux, so this only helps. */
 }
 
 a {

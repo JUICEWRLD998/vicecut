@@ -69,13 +69,16 @@
   height: 100%;
   object-fit: cover;
   /* Unselected missions are desaturated and held back. Selection is what
-     restores the colour, so focus is legible without an outline. */
-  filter: grayscale(0.55) brightness(0.62);
+     restores the colour, so focus is legible without an outline.
+     Regraded 2026-09-20: brightness 0.62 was crushing already-dark night
+     frames. 0.8 keeps the tile legible as a place while still clearly reading
+     as unselected. */
+  filter: grayscale(0.4) brightness(0.8);
   transition: filter var(--t-ui-slow) var(--ease-out);
 }
 
 .tile[data-focused="true"] .tileImg {
-  filter: grayscale(0) brightness(0.88);
+  filter: grayscale(0) brightness(1);
 }
 
 .tileScrim {

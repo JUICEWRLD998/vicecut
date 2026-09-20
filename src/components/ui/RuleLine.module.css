@@ -18,9 +18,13 @@
 .label {
   flex: none;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
+  font-weight: 500;
   letter-spacing: var(--track-meta);
   text-transform: uppercase;
-  color: var(--c-muted);
+  /* muted-hi, not muted. At 11px with 0.18em tracking the lighter grey measured
+     5.87:1 against the base, which passes AA but reads as a smudge at this
+     size; muted-hi is 8.29:1 and costs nothing visually. */
+  color: var(--c-muted-hi);
   font-variant-numeric: tabular-nums;
 }

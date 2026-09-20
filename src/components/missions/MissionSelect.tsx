@@ -126,10 +126,17 @@ export function MissionSelect() {
               onFocus={() => setFocused(i)}
               aria-label={`Operation ${m.code}, ${m.name}, ${m.location}. ${m.mood}.`}
             >
-              {/* Scenes are authored SVG, so next/image would need
-                  dangerouslyAllowSVG and would not optimise them anyway. */}
+              {/* Photographic scenes, but still a plain <img>: these are 3840px
+                  sources shown at tile size, so optimisation would add a build
+                  step without changing what the player sees. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img className={styles.tileImg} src={m.scene} alt="" aria-hidden="true" />
+              <img
+                className={styles.tileImg}
+                style={{ objectPosition: m.sceneFocus }}
+                src={m.scene}
+                alt=""
+                aria-hidden="true"
+              />
               <div className={styles.tileScrim} />
               {focused === i ? (
                 <CornerBrackets size="14px" tone="accent" />

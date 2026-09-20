@@ -40,6 +40,11 @@
   --c-accent: #ff5a72;
   --c-accent-dim: rgba(255, 90, 114, 0.14);
   --c-accent-line: rgba(255, 90, 114, 0.42);
+  /* Interactive steps for the solid button. These existed only as literals in
+     Button.module.css, which is the one place a raw hex is most likely to drift
+     out of sync with the accent it is derived from. */
+  --c-accent-hi: #ff7085; /* hover — one step toward the light */
+  --c-accent-lo: #e84e63; /* active — one step toward the ground */
 
   /* ---- support -------------------------------------------------------- */
   /* amber on base ............ 11.18:1  AA */
@@ -55,19 +60,23 @@
      for off-white text. Use --c-base for labels on coral. */
 
   /* ---- type ----------------------------------------------------------- */
-  /* Chosen in Phase 2: Editorial Condensed. Archivo carries both wdth and
-     wght, so the condensed cut is tunable per surface rather than fixed. */
+  /* Chosen in Phase 2: Editorial Condensed. REVERSED 2026-09-20 — the condensed
+     cut at wdth 76 was the wrong read. Rendered at hero size it came out narrow
+     and slightly cheap next to the scene art; the brief wants a heist-poster
+     masthead, and those are wide. Archivo carries a wdth axis spanning 62-125,
+     so the register is a token, not a family swap. Do NOT reintroduce a second
+     display family to get width — move this number. */
   --font-display: var(--font-archivo), "Arial Narrow", Impact, sans-serif;
   --font-ui: var(--font-instrument), Inter, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
 
-  /* Display width axis. 76 is the wordmark; surfaces where the type must read
-     as UI rather than masthead relax toward 100. */
-  --wdth-display: 76;
-  --wdth-tight: 84;
-  --wdth-ui: 100;
+  /* Display width axis, measured against the rendered wordmark rather than
+     guessed. 118 is the expanded masthead; surfaces where the type must read as
+     UI rather than title relax toward the axis default of 100. */
+  --wdth-display: 118;
+  --wdth-tight: 108;
 
-  --track-display: -0.018em;
+  --track-display: -0.022em; /* expanded letterforms need the extra pull-in */
   --track-meta: 0.18em; /* monospace micro-labels */
   --track-button: 0.14em;
 

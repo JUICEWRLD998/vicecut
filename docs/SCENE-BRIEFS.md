@@ -1,5 +1,17 @@
 # Scene sourcing briefs
 
+> **SUPERSEDED 2026-09-20 — see `SCENE-SOURCES.md`.**
+>
+> This brief was written for sourcing stock photography, and the filenames below
+> (`.jpg` for `night-marina`, `coastal-highway`, `industrial-port`) are the ones
+> that spec would have produced. The scenes did not end up coming from stock:
+> they are official GTA VI artwork, three of them matching these briefs' shot
+> intent closely enough that the briefs are worth keeping as rationale. The
+> delivered files are `title-cover.jpg`, `night-shift.jpg`, `southbound.jpg`,
+> `no-signal.jpg`.
+>
+> Kept for the reasoning only — do not source against the table below.
+
 Three hero scenes for VICE CUT. You source or shoot them; this file is the spec.
 
 **Deliver into `public/scenes/`.** Filenames are fixed — the app loads them by

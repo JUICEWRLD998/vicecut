@@ -43,6 +43,12 @@ export function MissionBrief({
       variants={staggerContainer(0.1, 0.05)}
       data-directing={directing}
     >
+      {/* Deliberately NOT using mission.sceneFocus here. That focus exists for
+          the mission tile, which is near-portrait and keeps only about a third
+          of the frame's width. The brief is near the source's own 16:9, so
+          `cover` discards roughly a tenth and centre is the honest crop —
+          applying the tile's focus would drag the subject under the type
+          column, which sits on the left. */}
       <motion.img
         className={styles.scene}
         src={mission.scene}

@@ -23,7 +23,10 @@ const SWATCHES = [
   { token: "--c-surface-3", value: "#1D2025", use: "hover / active" },
   { token: "--c-paper", value: "#EDE8DD", use: "primary text" },
   { token: "--c-muted", value: "#8C8C88", use: "secondary text" },
+  { token: "--c-muted-hi", value: "#A8A8A3", use: "small text" },
   { token: "--c-accent", value: "#FF5A72", use: "the one accent" },
+  { token: "--c-accent-hi", value: "#FF7085", use: "accent hover" },
+  { token: "--c-accent-lo", value: "#E84E63", use: "accent active" },
   { token: "--c-amber", value: "#FFB35C", use: "support only" },
   { token: "--c-cyan", value: "#55D8E8", use: "support only" },
 ];
@@ -49,9 +52,9 @@ export default function DesignPlayground() {
             Primitives
           </Display>
           <Prose tone="muted" size="small" className={styles.headNote}>
-            Editorial Condensed: Archivo at width 76 for display, Instrument Sans
-            for narrative text, Geist Mono for machine metadata. One accent,
-            coral, reserved for the primary action and the current step.
+            Archivo at width 118 for display, Instrument Sans for narrative
+            text, Geist Mono for machine metadata. One accent, coral, reserved
+            for the primary action and the current step.
           </Prose>
         </header>
 
@@ -165,7 +168,7 @@ export default function DesignPlayground() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               className={styles.plateImg}
-              src="/scenes/night-marina.svg"
+              src="/scenes/title-cover.jpg"
               alt=""
             />
             <div className={styles.plateScrim} />
@@ -208,6 +211,7 @@ export default function DesignPlayground() {
                 name: "The Night Shift",
                 loc: "Vice City Marina",
                 mood: "Night / Rain / Neon",
+                scene: "/scenes/night-shift.jpg",
                 state: "active",
               },
               {
@@ -215,6 +219,7 @@ export default function DesignPlayground() {
                 name: "Southbound",
                 loc: "Leonida Keys",
                 mood: "Sunset / Highway / Heat",
+                scene: "/scenes/southbound.jpg",
                 state: "idle",
               },
               {
@@ -222,12 +227,13 @@ export default function DesignPlayground() {
                 name: "No Signal",
                 loc: "Port Gellhorn",
                 mood: "Night / Industrial",
+                scene: "/scenes/no-signal.jpg",
                 state: "idle",
               },
             ].map((t) => (
               <article key={t.n} className={styles.tile} data-state={t.state}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img className={styles.tileImg} src="/scenes/night-marina.svg" alt="" />
+                <img className={styles.tileImg} src={t.scene} alt="" />
                 <div className={styles.tileScrim} />
                 {t.state === "active" ? (
                   <CornerBrackets size="14px" tone="accent" />
