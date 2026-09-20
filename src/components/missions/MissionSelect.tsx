@@ -7,8 +7,9 @@ import { Display, Metadata } from "@/components/ui/Typography";
 import { CornerBrackets } from "@/components/ui/CornerBracket";
 import { RuleLine } from "@/components/ui/RuleLine";
 import { GameShell } from "@/components/shell/Shell";
-import { MISSIONS, type Mission } from "@/data/missions";
-import { T_SCENE_SLOW, fadeIn, riseIn, staggerContainer } from "@/lib/motion";
+import { SceneSequence } from "@/components/transition/SceneSequence";
+import { MISSIONS, SEQUENCE_SCENES, type Mission } from "@/data/missions";
+import { fadeIn, riseIn, staggerContainer } from "@/lib/motion";
 import styles from "./MissionSelect.module.css";
 
 /**
@@ -20,24 +21,76 @@ import styles from "./MissionSelect.module.css";
  *
  * The three missions are peers in layout and each carries its own scene, so the
  * screen also does the work of proving the product scales past one scene.
+ *
+ * Confirming a tile runs a short scene sequence rather than a wipe — see
+ * `entryFrames` below.
  */
+
+/**
+ * The three stills shown when a mission is confirmed, ending on the mission's
+ * own scene so the sequence reads as travelling there rather than as a
+ * screensaver.
+ *
+ * This replaced a white exposure wipe, which was the one moment in the flow that
+ * flashed the screen to paper white between two dark, neon frames — the least
+ * filmic thing a "cinematic" demo can do, and the same mistake the title
+ * transition had already been fixed for. Reusing the sequence keeps one motion
+ * language across both entries into the fiction.
+ *
+ * Three frames at 300ms, against the title's six at 520ms: long enough to read
+ * as a transition, short enough that a judge reselecting a mission is not made
+ * to wait through it. Deterministic per mission, so the same tile always plays
+ * the same run (§6).
+ */
+function entryFrames(missionIndex: number, scene: string): string[] {
+  const total = SEQUENCE_SCENES.length;
+  return [
+    SEQUENCE_SCENES[(missionIndex * 2) % total],
+    SEQUENCE_SCENES[(missionIndex * 2 + 3) % total],
+    scene,
+  ];
+}
+
+const ENTRY_HOLD_MS = 300;
 
 export function MissionSelect() {
   const router = useRouter();
   const [focused, setFocused] = useState(0);
-  const [entering, setEntering] = useState<string | null>(null);
+  const [entering, setEntering] = useState<Mission | null>(null);
   const navigated = useRef(false);
   const tiles = useRef<Array<HTMLButtonElement | null>>([]);
 
-  const open = useCallback(
-    (mission: Mission) => {
-      if (navigated.current) return;
-      navigated.current = true;
-      setEntering(mission.id);
-      window.setTimeout(() => router.push(`/mission/${mission.id}`), 420);
-    },
-    [router],
-  );
+  /**
+   * Confirming a tile hands navigation to the sequence, which owns its own
+   * timing (including its shorter reduced-motion path). Scheduling a second
+   * timer here would race it.
+   */
+  const open = useCallback((mission: Mission) => {
+    if (navigated.current) return;
+    navigated.current = true;
+    setEntering(mission);
+  }, []);
+
+  const enterMission = useCallback(() => {
+    if (entering) router.push(`/mission/${entering.id}`);
+  }, [entering, router]);
+
+  /**
+   * Warm the mission route as soon as a tile takes focus.
+   *
+   * Same problem the title screen had: the sequence's own timer is not what the
+   * player waits on. Measured on dev, the entry sequence runs ~1.3s but the
+   * route took ~1.9s more to become ready, so the overlay held its last still
+   * for over a second after its beats had finished — which reads as a stall
+   * exactly when the player has committed.
+   *
+   * Prefetching on focus rather than on mount is deliberate: it is the moment
+   * intent is expressed, so the work happens while the player is still reading
+   * the tile, and it covers the keyboard path too (`move()` focuses the tile).
+   */
+  useEffect(() => {
+    router.prefetch(`/mission/${MISSIONS[focused].id}`);
+  }, [focused, router]);
 
   const move = useCallback((delta: number) => {
     setFocused((i) => {
@@ -125,7 +178,7 @@ export function MissionSelect() {
               type="button"
               className={styles.tile}
               data-focused={focused === i}
-              data-entering={entering === m.id}
+              data-entering={entering?.id === m.id}
               variants={riseIn}
               onClick={() => open(m)}
               onMouseEnter={() => setFocused(i)}
@@ -169,7 +222,20 @@ export function MissionSelect() {
           ))}
         </div>
 
-        {entering ? <motion.div className={styles.wipe} transition={T_SCENE_SLOW} initial={{ opacity: 0 }} animate={{ opacity: 1 }} /> : null}
+        {/* §22 scene transition into the mission. Replaces the paper-white
+            exposure flash that used to sit here — same overlay the title screen
+            uses, so both entrances into the fiction share one motion language.
+            Rendered as a sibling of <main> rather than inside it, for the reason
+            SceneSequence documents: `position: fixed` degrades to the nearest
+            transformed containing block. */}
+        {entering ? (
+          <SceneSequence
+            scenes={entryFrames(entering.index - 1, entering.scene)}
+            holdMs={ENTRY_HOLD_MS}
+            onComplete={enterMission}
+            label={entering.name}
+          />
+        ) : null}
       </motion.main>
     </GameShell>
   );

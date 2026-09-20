@@ -196,14 +196,6 @@
   opacity: 1;
 }
 
-.wipe {
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  background: var(--c-paper);
-  pointer-events: none;
-}
-
 @media (max-width: 1100px) {
   .stage {
     padding: var(--s-6) var(--s-5);
