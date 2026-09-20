@@ -1,26 +1,34 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { MissionBrief } from "@/components/missions/MissionBrief";
+import { DirectorCut } from "@/components/missions/DirectorCut";
 import { DirectorEditor, type CapturedFrame } from "@/components/editor/DirectorEditor";
 import { GameShell } from "@/components/shell/Shell";
-import type { Mission } from "@/data/missions";
+import { getNextMission, type Mission } from "@/data/missions";
 
 /**
- * Mission flow: brief -> director -> (Phase 6: cinematic -> result).
+ * Mission flow: brief -> director -> locked (Phase 6: -> cinematic).
  *
  * Held as one route with stages rather than separate pages, because §17 is
  * explicit that LOCK FRAME must not read as routing away. Routing between the
  * brief and the editor would also throw away the editor instance on every
- * experiment with the transition.
+ * experiment with the transition, and routing on lock would throw away the
+ * captured frame.
  */
 
-type Stage = "brief" | "direct";
+type Stage = "brief" | "direct" | "locked";
 
 export function MissionStage({ mission }: { mission: Mission }) {
+  const router = useRouter();
   const [stage, setStage] = useState<Stage>("brief");
   const [directing, setDirecting] = useState(false);
+  /** Phase 5's "store the edited image", held in component state. */
+  const [locked, setLocked] = useState<CapturedFrame | null>(null);
   const timer = useRef<number | null>(null);
+
+  const next = getNextMission(mission.id);
 
   useEffect(() => {
     return () => {
@@ -41,15 +49,49 @@ export function MissionStage({ mission }: { mission: Mission }) {
   }, []);
 
   /**
-   * Phase 5/6 hand-off. The frame is captured and logged for now; Phase 6
-   * replaces this with the cinematic.
+   * LOCK FRAME (§17). Captures the frame and moves to the cut.
+   *
+   * This used to `console.info` the frame and stop — Phase 5's checkpoint was
+   * satisfied on paper ("edited image visible") while the player saw nothing at
+   * all, which is why the editor read as a basic submission. The captured frame
+   * is now held in state and handed to the Director's Cut, which is what makes
+   * the eight tools have a visible consequence.
    */
   const lock = useCallback((frame: CapturedFrame) => {
-    console.info(
-      `[VICE CUT] frame locked from ${frame.source}${frame.degraded ? " (canvas fallback, no editor save)" : ""}`,
-      frame.dataUrl.slice(0, 32),
-    );
+    setLocked(frame);
+    setStage("locked");
   }, []);
+
+  /** Back to the same scene with a fresh editor, keeping the mission selected. */
+  const rollAgain = useCallback(() => {
+    setLocked(null);
+    setDirecting(false);
+    setStage("brief");
+  }, []);
+
+  /**
+   * Advance to the next mission. `router.push` rather than component state
+   * because `MissionStage` is keyed on the route param — the editor and its
+   * captured frame must be torn down between scenes, and a route change is what
+   * guarantees that.
+   */
+  const nextMission = useCallback(() => {
+    if (next) router.push(`/mission/${next.id}`);
+  }, [next, router]);
+
+  if (stage === "locked" && locked) {
+    return (
+      <GameShell intensity="light" vignette={false} grain={false}>
+        <DirectorCut
+          mission={mission}
+          frame={locked}
+          onRollAgain={rollAgain}
+          onNextMission={next ? nextMission : undefined}
+          nextMissionName={next?.name}
+        />
+      </GameShell>
+    );
+  }
 
   if (stage === "direct") {
     return (

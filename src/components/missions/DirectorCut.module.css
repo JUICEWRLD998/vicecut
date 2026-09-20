@@ -1,0 +1,224 @@
+/* THE DIRECTOR'S CUT (§17, §20). Pairs with DirectorCut.tsx.
+   The locked frame is the world; the slate sits on it, left-weighted, so the
+   two halves of the screen have one job each — picture on the right, report on
+   the left. No cards, no panels: the slate is type on the frame, per §7. */
+
+.stage {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* The edit, not the original. Scaled a hair over the frame so the slow push can
+   move without ever exposing an edge. */
+.frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Regraded for the locked frame specifically: this screen must show the edit at
+   strength — it is the proof the player's work happened — so the scrim is
+   lighter than the brief's, and shaped to the slate column rather than the whole
+   viewport. The right two-thirds stay almost untouched. */
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    rgba(9, 10, 12, 0.93) 0%,
+    rgba(9, 10, 12, 0.88) 34%,
+    rgba(9, 10, 12, 0.44) 56%,
+    rgba(9, 10, 12, 0.1) 78%,
+    rgba(9, 10, 12, 0.22) 100%
+  );
+}
+
+/* The shutter. Sits above the frame and the scrim, below the slate. */
+.flash {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: var(--c-paper);
+  pointer-events: none;
+}
+
+.notice {
+  position: absolute;
+  top: var(--s-7);
+  right: var(--s-8);
+  z-index: 4;
+}
+
+/* Left-weighted, vertically centred, and capped so a line of type never runs
+   the width of the screen. */
+.slate {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--s-5);
+  min-height: 100vh;
+  min-height: 100dvh;
+  max-width: 720px;
+  padding: var(--s-8);
+}
+
+.slateHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-5);
+  padding-bottom: var(--s-4);
+  border-bottom: var(--rule) solid var(--c-line);
+}
+
+.name {
+  margin: 0;
+}
+
+/* --- slate lines --------------------------------------------------------- */
+
+.states {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-6) var(--s-7);
+  margin-top: var(--s-1);
+}
+
+.state dt {
+  margin-bottom: var(--s-1);
+}
+
+.state dd {
+  margin: 0;
+}
+
+/* --- the measured readout ------------------------------------------------ */
+
+.payoff {
+  margin-top: var(--s-5);
+  padding-top: var(--s-5);
+  border-top: var(--rule) solid var(--c-accent-line);
+}
+
+.payoffLabel {
+  display: block;
+  margin-bottom: var(--s-4);
+  color: var(--c-accent);
+}
+
+/* The one boldness on this screen: the verdict word, at display scale. It is
+   the answer to "what did my edit do", so it gets the loudest type in the
+   readout — the numbers underneath are evidence, not the headline. */
+.figureHeadline {
+  font-family: var(--font-display);
+  font-variation-settings: "wdth" var(--wdth-display), "wght" 800;
+  font-weight: 800;
+  font-size: clamp(38px, 4.4vw, 62px);
+  line-height: 0.94;
+  letter-spacing: var(--track-display);
+  text-transform: uppercase;
+  color: var(--c-paper);
+  margin-bottom: var(--s-5);
+}
+
+.measured {
+  display: flex;
+  flex-direction: column;
+}
+
+.readout {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-5);
+}
+
+.cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.cell dd {
+  margin: 0;
+}
+
+/* The number is the loudest thing in the row, per §31's hierarchy rule — the
+   eye should land on the measurement, then read what it means. Tabular figures
+   so the three columns align even as the digits change between takes. */
+.figure {
+  font-family: var(--font-display);
+  font-variation-settings: "wdth" var(--wdth-tight), "wght" 800;
+  font-weight: 800;
+  font-size: clamp(30px, 3.4vw, 46px);
+  line-height: 1;
+  letter-spacing: var(--track-display);
+  font-variant-numeric: tabular-nums;
+  color: var(--c-paper);
+}
+
+.cellNote {
+  color: var(--c-muted);
+}
+
+/* Holds the block's height while the analysis resolves, so the slate does not
+   jump when the readout lands. Sized to the headline plus the figure row. */
+.readoutPending {
+  height: clamp(150px, 16vw, 190px);
+}
+
+/* --- outcome + actions --------------------------------------------------- */
+
+.foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-6);
+  margin-top: var(--s-5);
+  padding-top: var(--s-5);
+  border-top: var(--rule) solid var(--c-line);
+}
+
+.stamp {
+  display: flex;
+  flex-direction: column;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+}
+
+@media (max-width: 900px) {
+  .slate {
+    padding: var(--s-6) var(--s-5);
+    max-width: none;
+  }
+  .scrim {
+    background: linear-gradient(
+      to bottom,
+      rgba(9, 10, 12, 0.9) 0%,
+      rgba(9, 10, 12, 0.82) 60%,
+      rgba(9, 10, 12, 0.72) 100%
+    );
+  }
+  .readout {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--s-4);
+  }
+  .foot {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--s-4);
+  }
+  .actions {
+    justify-content: space-between;
+  }
+}

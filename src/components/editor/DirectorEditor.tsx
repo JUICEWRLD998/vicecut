@@ -39,6 +39,16 @@ export type CapturedFrame = {
   source: "onSave" | "getImage()";
   /** True when onSave failed and the frame came from the live canvas instead. */
   degraded: boolean;
+  /**
+   * Whether the editor reported unsaved changes at lock time.
+   *
+   * Asked of the editor rather than inferred from the captured pixels. A single
+   * thin stroke on a 4K frame covers about 0.03% of it, which disappears below
+   * the resolution a pixel comparison can reasonably sample — so a diff-based
+   * answer misreports "you drew nothing" for a frame the player can see is
+   * marked. The editor knows, so this carries its answer through to the slate.
+   */
+  edited: boolean;
 };
 
 /**
@@ -73,6 +83,13 @@ export function DirectorEditor({
    * §16: only the tools that make sense for this mission.
    * Built from the mission's `tools` map so the data owns the decision.
    *
+   * The map is spread directly and NOT filtered. It used to hardcode
+   * `stickers: false, frame: false` on top of the spread, which silently
+   * overrode the data for two of the eight tools — they could never appear, no
+   * matter what a mission declared. The per-mission map is now the only thing
+   * that decides, and every key in `EditorTools` is required, so a mission
+   * cannot leave one to the editor's enabled-by-default fallback by accident.
+   *
    * Depends on `mission.tools` alone (a stable reference from the missions
    * array), NOT on the whole mission object — a new object identity here would
    * remount the editor and discard the user's edit.
@@ -83,17 +100,73 @@ export function DirectorEditor({
       features: {
         imageEditor: {
           enabled: true,
-          tools: { ...mission.tools, stickers: false, frame: false },
+          tools: mission.tools,
         },
       },
     }),
     [mission.tools],
   );
 
+  const canvasRef = useRef<HTMLDivElement>(null);
+  /** Latest onLock, so the save callback never fires a stale closure. */
+  const onLockRef = useRef(onLock);
+  useEffect(() => {
+    onLockRef.current = onLock;
+  }, [onLock]);
+
+  /** True while LOCK FRAME is waiting on the editor's save to come back. */
+  const pendingLock = useRef(false);
+  const fallbackTimer = useRef<number | null>(null);
+  const [developing, setDeveloping] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (fallbackTimer.current !== null) window.clearTimeout(fallbackTimer.current);
+    };
+  }, []);
+
+  /**
+   * Whether the editor had unsaved changes at the moment LOCK FRAME was pressed.
+   *
+   * Captured before the save is triggered, not inside the save callback: the
+   * editor clears its dirty flag as part of saving, so reading `hasChanges()`
+   * from inside `onSave` would report false for an edit that is right there in
+   * the payload.
+   */
+  const editedAtLock = useRef(false);
+
+  /**
+   * The editor's save payload — the only capture path that reflects the edit.
+   *
+   * `getImage()` is NOT equivalent, and this is the one place in the
+   * integration where using the obvious method silently loses work. Measured on
+   * a frame with the Grayscale filter applied: `onSave` returned a fully
+   * desaturated frame (channel spread 0), while `getImage()` returned a COLOURED
+   * 3840x2160 image — the un-graded base — with spread 16.14. A player who only
+   * filtered their scene was therefore captured as having done nothing at all,
+   * and the slate honestly reported "Unmarked" for an edit they could see.
+   * Missions 02 and 03 both lean on grading, so this was load-bearing.
+   */
   const handleSave = useCallback((result: ImageEditorSaveResult) => {
-    const { dataUrl } = result;
-    setStaged({ dataUrl, source: "onSave", degraded: false });
+    const frame: CapturedFrame = {
+      dataUrl: result.dataUrl,
+      source: "onSave",
+      degraded: false,
+      edited: editedAtLock.current,
+    };
+    setStaged(frame);
     setSaveFailed(false);
+    setDeveloping(false);
+
+    if (fallbackTimer.current !== null) {
+      window.clearTimeout(fallbackTimer.current);
+      fallbackTimer.current = null;
+    }
+    // LOCK FRAME is waiting on this save, so hand the frame straight over.
+    if (pendingLock.current) {
+      pendingLock.current = false;
+      onLockRef.current(frame);
+    }
   }, []);
 
   const handleLoad = useCallback((editor: ImageEditorInstance) => {
@@ -104,24 +177,64 @@ export function DirectorEditor({
   /**
    * LOCK FRAME (§17).
    *
-   * Prefers the onSave payload. If the user never pressed the editor's own
-   * save, this lifts the live canvas instead — but it records that the frame
-   * came from the canvas, so the UI can stay honest about it rather than
-   * claiming a save happened.
+   * Drives the editor's own save and locks what comes back, rather than lifting
+   * the canvas. Always, even if the player already pressed Save — an earlier
+   * version reused that earlier save, which meant an edit made AFTER pressing
+   * Save was silently discarded at lock time. Saving again costs a moment and
+   * guarantees the locked frame is the frame on screen.
+   *
+   * `getImage()` is the fallback only, and it is flagged as degraded, because it
+   * does not include a filter (see handleSave). Falling back is still better
+   * than failing the demo, but the Cut screen is told, so it never presents a
+   * half-captured frame as a real export.
    */
   const lockFrame = useCallback(() => {
-    if (staged) {
-      onLock(staged);
-      return;
-    }
+    if (developing) return;
+
+    // Read the dirty flag BEFORE triggering the save: saving clears it.
     const editor = instanceRef.current ?? editorRef.current?.editor ?? null;
-    const dataUrl = editor?.getImage() ?? null;
-    if (!dataUrl) {
-      setSaveFailed(true);
+    editedAtLock.current = editor?.hasChanges() ?? false;
+
+    const saveButton = canvasRef.current
+      ? [...canvasRef.current.querySelectorAll("button")].find(
+          (b) => b.textContent?.trim() === "Save",
+        )
+      : undefined;
+
+    const liftCanvas = () => {
+      const dataUrl = editor?.getImage() ?? null;
+      if (!dataUrl) {
+        setDeveloping(false);
+        setSaveFailed(true);
+        return;
+      }
+      setDeveloping(false);
+      onLock({
+        dataUrl,
+        source: "getImage()",
+        degraded: true,
+        edited: editedAtLock.current,
+      });
+    };
+
+    if (!saveButton) {
+      liftCanvas();
       return;
     }
-    onLock({ dataUrl, source: "getImage()", degraded: true });
-  }, [onLock, staged]);
+
+    pendingLock.current = true;
+    setDeveloping(true);
+    saveButton.click();
+
+    // If the save never comes back — no changes to flush, a rejected promise, a
+    // hung editor — do not strand the player on a button that does nothing.
+    fallbackTimer.current = window.setTimeout(() => {
+      fallbackTimer.current = null;
+      if (!pendingLock.current) return;
+      pendingLock.current = false;
+      liftCanvas();
+    }, 4000);
+  }, [developing, onLock]);
 
   /**
    * §24 — Escape leaves the editor.
@@ -183,8 +296,19 @@ export function DirectorEditor({
           </Metadata>
         </div>
         <div className={styles.barRight}>
-          <Metadata tone={mounted ? "paper" : "muted"}>
-            {mounted ? "Editor live" : "Loading editor"}
+          {/* The editor's own Save stages a frame but, until now, said nothing —
+              the player pressed Save and the screen was unchanged, which is why
+              the flow read as a stub. The bar now reports what Save did and what
+              is left to do, so the two-step (Save, then Lock Frame) is legible
+              instead of looking like the button failed. */}
+          <Metadata tone={staged ? "accent" : mounted ? "paper" : "muted"}>
+            {loadError
+              ? "Scene unavailable"
+              : staged
+                ? "Frame staged — lock to develop"
+                : mounted
+                  ? "Editor live"
+                  : "Loading editor"}
           </Metadata>
           <Button variant="quiet" onClick={onExit}>
             Esc
@@ -200,7 +324,7 @@ export function DirectorEditor({
         </div>
       )}
 
-      <div className={styles.canvas}>
+      <div className={styles.canvas} ref={canvasRef}>
         <CornerBracket corner="tl" size="14px" />
         <CornerBracket corner="br" size="14px" />
         <ImageEditor
@@ -210,6 +334,11 @@ export function DirectorEditor({
           minHeight="100%"
           onLoad={handleLoad}
           onSave={handleSave}
+          /* The editor's own Cancel button routes to the same place as Esc. It
+             was unhandled, so pressing it discarded the edit and left the screen
+             exactly as it was — the editor sat there with a cleared canvas and
+             no way to tell that anything had happened. */
+          onCancel={onExit}
           onLoadError={() => setLoadError(true)}
           onError={(e) => setError(e.message)}
         />
@@ -224,8 +353,13 @@ export function DirectorEditor({
             Nothing to lock — the canvas could not be read
           </Metadata>
         ) : null}
-        <Button variant="solid" hint="Lock" onClick={lockFrame} disabled={loadError}>
-          Lock frame
+        <Button
+          variant="solid"
+          hint="Lock"
+          onClick={lockFrame}
+          disabled={loadError || developing}
+        >
+          {developing ? "Developing" : "Lock frame"}
         </Button>
       </footer>
     </motion.section>

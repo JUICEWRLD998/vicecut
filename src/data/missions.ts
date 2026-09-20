@@ -5,7 +5,7 @@
  * do not own it. Adding a mission should mean adding one object here.
  *
  * `tools` is the curated editor toolset per mission (§16) — the editor should
- * feel directed, not like a box of every tool that exists. Consumed in Phase 5.
+ * feel directed, not like a box of every tool that exists.
  */
 
 export type MissionId = "the-night-shift" | "southbound" | "no-signal";
@@ -13,10 +13,15 @@ export type MissionId = "the-night-shift" | "southbound" | "no-signal";
 /**
  * Curated editor toolset, per §16.
  *
- * Every key is REQUIRED and must be stated explicitly. An omitted key is not
- * "off" — the editor falls back to its own default, which is enabled. Omitting
- * `resize` once silently shipped an extra tool in the curated rail, so the type
- * now makes the omission a compile error rather than a runtime surprise.
+ * Every one of the editor's eight tools is declared, and every key is REQUIRED.
+ * Both halves of that are deliberate:
+ *
+ * - Required, because an omitted key is not "off" — the editor falls back to its
+ *   own default, which is enabled. Omitting `resize` once silently shipped an
+ *   extra tool in the curated rail, so the type makes omission a compile error.
+ * - Explicit even when `false`, because the rail is an art-direction decision.
+ *   `frame: false` on the redaction mission is a statement about that mission,
+ *   not an oversight, and it should be readable as one at the point of editing.
  */
 export type EditorTools = {
   crop: boolean;
@@ -59,6 +64,36 @@ export type Mission = {
   objective: string;
   /** Verbatim radio line for the cinematic. */
   radio: { who: string; line: string };
+  /**
+   * The Director's Cut slate readout (§20).
+   *
+   * The editor hands back a flattened image; it hands back no idea what was
+   * done to it. So the readout is part invention — but built from facts: the
+   * measurements below (wraps, runtime) are computed from the locked frame
+   * itself, and only the film-language naming is authored per mission. The
+   * result reads as a real slate rather than a canned score, which is what §20
+   * asks for when it says not to pretend these are measured AI scores.
+   */
+  slate: {
+    /** What the camera did, in film language. */
+    framing: string;
+    /** The genre line. */
+    genre: string;
+    /** What the locked frame is a print of. */
+    process: string;
+    /**
+     * The word the slate reports when the player annotated the frame — drawn,
+     * typed, or placed a shape on it.
+     *
+     * Authored per mission so it echoes that mission's own instruction rather
+     * than printing a generic "MARKED" three times: mission 01 says "mark the
+     * moment", so its verdict is Marked; mission 03 says "obscure the target",
+     * so its verdict is Redacted. The classification is derived from measured
+     * pixels (`classifyEdit` in src/lib/frame.ts); only this word is authored,
+     * and it is the vocabulary the brief already gave the player.
+     */
+    verdict: string;
+  };
   tools: EditorTools;
 };
 
@@ -77,6 +112,14 @@ export const MISSIONS: readonly Mission[] = [
     instruction: "Mark the moment the plan goes wrong.",
     objective: "Reach the marina",
     radio: { who: "JASON", line: "You got one shot." },
+    slate: {
+      framing: "Tight two",
+      genre: "Neon noir",
+      process: "Annotated print",
+      verdict: "Marked",
+    },
+    /* Annotation-led: mark it, label it, grade it, finish it. `resize` is the
+       one tool with no narrative job here — the shot is already framed. */
     tools: {
       crop: true,
       resize: false,
@@ -84,8 +127,8 @@ export const MISSIONS: readonly Mission[] = [
       draw: true,
       text: true,
       shapes: true,
-      stickers: false,
-      frame: false,
+      stickers: true,
+      frame: true,
     },
   },
   {
@@ -102,6 +145,15 @@ export const MISSIONS: readonly Mission[] = [
     instruction: "Frame the escape.",
     objective: "Keep the car in frame",
     radio: { who: "LUCIA", line: "Don't lose him." },
+    slate: {
+      framing: "Raked push-in",
+      genre: "Sunset pursuit",
+      process: "Framed print",
+      verdict: "Framed",
+    },
+    /* Framing-led, per §11 — the brief calls this the scene that "should
+       demonstrate cropping/framing more than drawing", so the annotation tools
+       are off entirely. Four tools, all about where the edges are. */
     tools: {
       crop: true,
       resize: true,
@@ -110,7 +162,7 @@ export const MISSIONS: readonly Mission[] = [
       text: false,
       shapes: false,
       stickers: false,
-      frame: false,
+      frame: true,
     },
   },
   {
@@ -127,14 +179,25 @@ export const MISSIONS: readonly Mission[] = [
     instruction: "Obscure the target.",
     objective: "Break the line of sight",
     radio: { who: "JASON", line: "Camera's live. Do something." },
+    slate: {
+      framing: "Redacted frame",
+      genre: "Cold surveillance",
+      process: "Seized footage",
+      verdict: "Redacted",
+    },
+    /* Obstruction-led: censor bars, blackout strokes, redaction, and a grade to
+       sell the camera. `crop` stays because reframing the target out of shot is
+       a legitimate answer to the brief, which makes this the one mission where
+       two different tools solve the same instruction. No resize or frame — this
+       is surveillance footage, not a framed print. */
     tools: {
-      crop: false,
+      crop: true,
       resize: false,
       filter: true,
       draw: true,
       text: true,
       shapes: true,
-      stickers: false,
+      stickers: true,
       frame: false,
     },
   },
