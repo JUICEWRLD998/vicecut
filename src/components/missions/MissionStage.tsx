@@ -3,22 +3,29 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MissionBrief } from "@/components/missions/MissionBrief";
+import { BriefingClip } from "@/components/missions/BriefingClip";
 import { DirectorCut } from "@/components/missions/DirectorCut";
 import { DirectorEditor, type CapturedFrame } from "@/components/editor/DirectorEditor";
 import { GameShell } from "@/components/shell/Shell";
-import { getNextMission, type Mission } from "@/data/missions";
+import { getNextMission, editableFrame, type Mission } from "@/data/missions";
 
 /**
- * Mission flow: brief -> director -> locked (Phase 6: -> cinematic).
+ * Mission flow: brief -> briefing clip -> director -> locked
+ * (Phase 6: -> cinematic).
  *
  * Held as one route with stages rather than separate pages, because §17 is
  * explicit that LOCK FRAME must not read as routing away. Routing between the
  * brief and the editor would also throw away the editor instance on every
  * experiment with the transition, and routing on lock would throw away the
  * captured frame.
+ *
+ * The clip stage exists so the instruction is earned. Mission 01 asks the player
+ * to "mark the moment the plan goes wrong", and without seeing the plan they
+ * have nothing to mark against — the editor becomes a decoration tool. The clip
+ * shows the beat, freezes on it, and hands THAT FRAME to the editor.
  */
 
-type Stage = "brief" | "direct" | "locked";
+type Stage = "brief" | "clip" | "direct" | "locked";
 
 export function MissionStage({ mission }: { mission: Mission }) {
   const router = useRouter();
@@ -36,16 +43,26 @@ export function MissionStage({ mission }: { mission: Mission }) {
     };
   }, []);
 
-  /** §15: brief sits, the scene dims, then the editor enters. */
+  /** §15: brief sits, the scene dims, then the briefing clip takes over. */
   const direct = useCallback(() => {
     if (directing) return;
     setDirecting(true);
-    timer.current = window.setTimeout(() => setStage("direct"), 380);
-  }, [directing]);
+    timer.current = window.setTimeout(() => {
+      // A mission with no clip goes straight to the editor rather than showing
+      // a playing-state with nothing in it.
+      setStage(mission.briefing ? "clip" : "direct");
+    }, 380);
+  }, [directing, mission.briefing]);
 
   const exit = useCallback(() => {
     setDirecting(false);
     setStage("brief");
+  }, []);
+
+  /** The clip finished (or was skipped) — open the editor on the frozen frame. */
+  const openEditor = useCallback(() => {
+    setDirecting(false);
+    setStage("direct");
   }, []);
 
   /**
@@ -93,10 +110,29 @@ export function MissionStage({ mission }: { mission: Mission }) {
     );
   }
 
+  if (stage === "clip" && mission.briefing) {
+    return (
+      <GameShell intensity="light" vignette={false} grain={false}>
+        <BriefingClip
+          briefing={mission.briefing}
+          missionName={mission.name}
+          missionCode={mission.code}
+          onMark={openEditor}
+          onSkip={openEditor}
+        />
+      </GameShell>
+    );
+  }
+
   if (stage === "direct") {
     return (
       <GameShell intensity="light" vignette={false} grain={false}>
-        <DirectorEditor mission={mission} onLock={lock} onExit={exit} />
+        <DirectorEditor
+          mission={mission}
+          image={editableFrame(mission)}
+          onLock={lock}
+          onExit={exit}
+        />
       </GameShell>
     );
   }

@@ -34,6 +34,47 @@ export type EditorTools = {
   frame: boolean;
 };
 
+/**
+ * The pre-edit briefing clip (§10-12, §18).
+ *
+ * A short cut of stills that plays before the editor opens, ending on a freeze
+ * frame the player then marks. It exists because the instruction was unearned:
+ * mission 01 says "mark the moment the plan goes wrong" and, without this, the
+ * player has never seen the plan or seen it go wrong. Five seconds of footage
+ * earns the instruction and turns the editor from "decorate a photo" into
+ * "annotate evidence of a specific failure".
+ *
+ * Built from stills rather than trailer footage, deliberately. The official
+ * trailers were pulled and examined: Trailer 1 is a 90s lifestyle montage with
+ * no narrative beat to freeze on, it is encoded MPEG-4 Part 2 (which browsers do
+ * not play, so every clip would need re-encoding), and it carries frames this
+ * project's own content bar would reject — two pool-party shots, a nightclub
+ * interior, and a frame captioned "Neighborhood watch teen shot". It also opens
+ * on an ESRB warning card. The screenshot set is already screened, already 4K,
+ * already in this repo. Full reading in docs/SCENE-SOURCES.md.
+ */
+export type Briefing = {
+  /**
+   * Stills in cut order. THE LAST ONE IS THE FREEZE FRAME — it is what the
+   * player marks, and what the target region below is measured against. Stated
+   * once rather than as a separate field, so the two cannot drift apart.
+   */
+  frames: readonly string[];
+  /** How long each still holds before the cut, in ms. */
+  holdMs: number;
+  /**
+   * Where the moment actually is, as fractions of the frame.
+   *
+   * DERIVED FROM THE IMAGE, not authored by eye — see the note on the
+   * derivation below. Generous on purpose (0.36 of the frame per side): a demo
+   * that tells a judge they failed because their mark was 40px off is worse
+   * than having no check at all.
+   */
+  target: { x: number; y: number; w: number; h: number };
+  /** What the clip is showing, for the objective line over the freeze. */
+  beat: string;
+};
+
 export type Mission = {
   id: MissionId;
   /** 1-based, drives "SCENE 01 / 03". */
@@ -94,6 +135,12 @@ export type Mission = {
      */
     verdict: string;
   };
+  /**
+   * The pre-edit clip. Optional so a mission without one still works, but every
+   * mission in the demo should have one — an instruction the player has not
+   * earned is the weaker half of this product.
+   */
+  briefing?: Briefing;
   tools: EditorTools;
 };
 
@@ -117,6 +164,34 @@ export const MISSIONS: readonly Mission[] = [
       genre: "Neon noir",
       process: "Annotated print",
       verdict: "Marked",
+    },
+    /**
+     * Three beats, ~1.5s each, ending on the freeze the player marks.
+     *
+     * 1. the world — the night city the mission happens in, which doubles as the
+     *    mission's own scene so the clip and the level are visibly the same place
+     * 2. the meet — Jason at the bar with the money out and two men watching him
+     * 3. the moment — the burning car, and the two of them walking away from it
+     *
+     * The third frame is the freeze. The target region was derived from that
+     * image rather than placed by eye, and the derivation has a real failure mode
+     * worth recording: the first version scored a cell by luminance x saturation
+     * and latched onto a flat sunset sky on mission 03, because a bright empty
+     * gradient scores exactly like a lit subject. The measure now multiplies in a
+     * high-pass term — how far a pixel departs from its blurred neighbourhood —
+     * so bright AND detailed wins and bright AND flat no longer scores. Regions
+     * were then drawn onto their frames and checked visually; scores alone would
+     * not have caught it.
+     */
+    briefing: {
+      frames: [
+        "/scenes/night-shift.jpg",
+        "/briefs/Jason_Duval_06.jpg",
+        "/briefs/Jason_and_Lucia_08.jpg",
+      ],
+      holdMs: 1500,
+      target: { x: 0.351, y: 0.542, w: 0.36, h: 0.36 },
+      beat: "The meet is compromised.",
     },
     /* Annotation-led: mark it, label it, grade it, finish it. `resize` is the
        one tool with no narrative job here — the shot is already framed. */
@@ -266,6 +341,22 @@ export const SEQUENCE_SCENES = [
 
 export function getMission(id: string): Mission | undefined {
   return MISSIONS.find((m) => m.id === id);
+}
+
+/**
+ * The image the editor opens on, and the frame the locked result is measured
+ * against.
+ *
+ * This is the briefing's freeze frame when there is one, not `mission.scene`.
+ * The two are different pictures — mission 01's `scene` is the night-city aerial
+ * used for the tile and the brief, while its freeze is the burning car — and
+ * measuring a locked frame against the wrong one would report a near-100%
+ * change on a frame nobody touched. Both the editor's source and the analysis
+ * baseline read from here, so they cannot disagree.
+ */
+export function editableFrame(mission: Mission): string {
+  const frames = mission.briefing?.frames;
+  return frames && frames.length > 0 ? frames[frames.length - 1] : mission.scene;
 }
 
 /**
