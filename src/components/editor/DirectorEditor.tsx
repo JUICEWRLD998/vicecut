@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ImageEditor, {
   type ImageEditorInstance,
   type ImageEditorOptions,
@@ -41,6 +41,13 @@ export type CapturedFrame = {
   degraded: boolean;
 };
 
+/**
+ * How long an Escape on a dirty canvas waits for a second press. One source of
+ * truth: the arming effect and the expiry timer must not drift apart, or the
+ * warning can outlive its own confirmation window.
+ */
+const ESC_ARM_MS = 4000;
+
 export function DirectorEditor({
   mission,
   onLock,
@@ -59,6 +66,8 @@ export function DirectorEditor({
   const [saveFailed, setSaveFailed] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** True while a first Escape on a dirty canvas is waiting on a confirmation. */
+  const [escArmed, setEscArmed] = useState(false);
 
   /**
    * §16: only the tools that make sense for this mission.
@@ -114,6 +123,50 @@ export function DirectorEditor({
     onLock({ dataUrl, source: "getImage()", degraded: true });
   }, [onLock, staged]);
 
+  /**
+   * §24 — Escape leaves the editor.
+   *
+   * The bar has offered an "Esc" affordance since Phase 4, but nothing listened
+   * for the key: it was a label on a button, so the only real way out was to
+   * click it. This is the missing half.
+   *
+   * Escape discards the edit, so on a dirty canvas it arms instead of exiting —
+   * first press warns, second confirms. The arm expires on its own so a stray
+   * keypress does not leave the editor in a state where the next one silently
+   * throws the work away. A native confirm() would break the frame this screen
+   * is built to hold.
+   */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+
+      // The editor owns Escape while one of its own fields or dialogs has
+      // focus — the text tool is contenteditable, and cancelling a text box
+      // must not close the whole screen.
+      const target = e.target as HTMLElement | null;
+      if (target?.closest?.('[contenteditable="true"], input, textarea, [role="dialog"]')) {
+        return;
+      }
+
+      const dirty = instanceRef.current?.hasChanges() ?? false;
+      if (dirty && !escArmed) {
+        e.preventDefault();
+        setEscArmed(true);
+        return;
+      }
+      onExit();
+    };
+
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [escArmed, onExit]);
+
+  useEffect(() => {
+    if (!escArmed) return;
+    const expiry = window.setTimeout(() => setEscArmed(false), ESC_ARM_MS);
+    return () => window.clearTimeout(expiry);
+  }, [escArmed]);
+
   return (
     <motion.section
       className={styles.editor}
@@ -163,7 +216,9 @@ export function DirectorEditor({
       </div>
 
       <footer className={styles.foot}>
-        <Metadata className={styles.footHint}>{mission.instruction}</Metadata>
+        <Metadata className={styles.footHint}>
+          {escArmed ? "Press esc again to discard this edit" : mission.instruction}
+        </Metadata>
         {saveFailed ? (
           <Metadata tone="accent">
             Nothing to lock — the canvas could not be read

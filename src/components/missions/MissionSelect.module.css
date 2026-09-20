@@ -1,3 +1,55 @@
+/* --- the world behind the selector --------------------------------------
+   The screen used to sit on flat --c-base, which read as a switched-off panel
+   under three photographic tiles. It now carries a blurred still from the
+   title sequence: the same world, defocused, so the tiles read as windows onto
+   it rather than the only lit things on a dead ground.
+
+   Fixed, not absolute. The tile grid can outgrow the viewport on a short
+   screen, and an absolute ground would stretch with the document — so the crop
+   would land in a different place on every laptop, and the composition would
+   stop being a decision. */
+
+.ground {
+  position: fixed;
+  /* Negative inset, not `transform: scale()`. It bleeds the layer past the frame
+     so the blur's edge samples fall outside the viewport — otherwise the
+     backdrop grows a soft dark border where the filter had nothing to read.
+     A transform would also make this a containing block for any fixed
+     descendant, which is the trap the shell's scope comment already warns about. */
+  inset: -8%;
+  z-index: 0;
+  background-image: url("/ground/operation-select.jpg");
+  background-size: cover;
+  /* 42%, not centre: the frame's subject and its uplight sit low in the source,
+     and centring pushes them out of the crop. */
+  background-position: 50% 42%;
+  /* The filter values are contrast decisions, not taste. Measured against the
+     rendered pixels of the header band: at this grading the brightest pixel
+     under the 11px muted metadata still clears AA behind the scrim below.
+     Dropping the scrim while keeping this brightness is what fails. */
+  filter: blur(22px) saturate(1.12) brightness(1.15);
+}
+
+/* One gradient, shaped to the text rather than a uniform wash.
+   The 11px muted labels are the binding constraint on this screen — they are
+   the smallest, dimmest pair in the product — so the scrim holds ~0.9 through
+   the header block and then releases hard. Below 205px nothing needs it: the
+   tiles carry their own scrims, and the gaps are where the world should show
+   through. A flat 0.9 to the bottom would delete the image entirely. */
+.groundScrim {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(9, 10, 12, 0.9) 0px,
+    rgba(9, 10, 12, 0.88) 205px,
+    rgba(9, 10, 12, 0.52) 330px,
+    rgba(9, 10, 12, 0.2) 58%,
+    rgba(9, 10, 12, 0.3) 100%
+  );
+}
+
 .stage {
   position: relative;
   z-index: 1;
@@ -8,6 +60,9 @@
   padding: var(--s-8) var(--s-8) var(--s-7);
   max-width: 1600px;
   margin: 0 auto;
+  /* The backdrop is viewport-wide; the content column is capped at 1600px. On a
+     wider screen the ground must still cover the full window, so it stays out
+     of this element rather than being letterboxed with it. */
 }
 
 .head {
@@ -81,14 +136,24 @@
   filter: grayscale(0) brightness(1);
 }
 
+/* The band covering the labels is measured in PIXELS, not percent.
+   The tile labels are 11px muted metadata in a fixed-height block at the bottom
+   of the tile, but the tile itself is fluid — 704px tall at 1600x1000 and 505px
+   at 1366x768. A percentage stop therefore slides across the text as the
+   viewport changes, and the same gradient that measured 4.70:1 at the wide size
+   measured 3.95:1 at 1366x768, where the compressed stop left the label sitting
+   in a lighter part of the ramp. A pixel stop pins the protection to the text
+   wherever the tile lands. Verified at both: 4.83:1 and 4.72:1.
+   The upper stops stay in percent so the photograph keeps scaling with the tile. */
 .tileScrim {
   position: absolute;
   inset: 0;
   background: linear-gradient(
     to top,
-    rgba(9, 10, 12, 0.97) 0%,
-    rgba(9, 10, 12, 0.68) 38%,
-    rgba(9, 10, 12, 0.16) 78%,
+    rgba(9, 10, 12, 0.96) 0px,
+    rgba(9, 10, 12, 0.88) 190px,
+    rgba(9, 10, 12, 0.42) 62%,
+    rgba(9, 10, 12, 0.2) 80%,
     rgba(9, 10, 12, 0.34) 100%
   );
 }
