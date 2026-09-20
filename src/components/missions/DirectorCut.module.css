@@ -21,19 +21,24 @@
   object-fit: cover;
 }
 
-/* Regraded for the locked frame specifically: this screen must show the edit at
-   strength — it is the proof the player's work happened — so the scrim is
-   lighter than the brief's, and shaped to the slate column rather than the whole
-   viewport. The right two-thirds stay almost untouched. */
+/* Shaped to the slate column, and MEASURED rather than eyeballed.
+   The first version fell from 0.85 to 0.4 between 30% and 52% of the viewport,
+   which was fine for the short labels and not fine for the long ones: the
+   readout's note line runs to ~39% of a 1600px stage, where that ramp had
+   already dropped to ~0.67, and the fire behind it put "MARK ON TARGET" at
+   3.55:1 and the note at 3.77:1 against an 11px requirement of 4.5:1.
+   The column is capped at 720px (~45% of a 1600px stage), so the scrim now holds
+   ~0.92 across that whole width and only then falls away. The right third is
+   still the picture — which is the point of the screen. */
 .scrim {
   position: absolute;
   inset: 0;
   background: linear-gradient(
     100deg,
-    rgba(9, 10, 12, 0.93) 0%,
-    rgba(9, 10, 12, 0.88) 34%,
-    rgba(9, 10, 12, 0.44) 56%,
-    rgba(9, 10, 12, 0.1) 78%,
+    rgba(9, 10, 12, 0.94) 0%,
+    rgba(9, 10, 12, 0.92) 50%,
+    rgba(9, 10, 12, 0.5) 68%,
+    rgba(9, 10, 12, 0.08) 86%,
     rgba(9, 10, 12, 0.22) 100%
   );
 }
@@ -133,6 +138,40 @@
   flex-direction: column;
 }
 
+/* --- the pass/fail line -------------------------------------------------
+   Two states, one accent each. On target is the mint-free choice the rest of
+   the product makes: it uses the same coral as everything else, with the line
+   weight carrying the verdict, so "pass" does not introduce a second colour
+   system. Off target is the muted grey — a miss should read as missing
+   information rather than as an alarm, because a judge reading FAILED in red
+   reads it as the app being broken, not as their mark being wide. */
+.check {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--s-5);
+  padding: var(--s-3) 0;
+  border-top: var(--rule) solid var(--c-line);
+  border-bottom: var(--rule) solid var(--c-line);
+}
+
+.check[data-pass="true"] {
+  border-color: var(--c-accent-line);
+}
+
+.check[data-pass="true"] .checkLabel {
+  color: var(--c-accent);
+}
+
+.check[data-pass="false"] .checkLabel {
+  color: var(--c-muted-hi);
+}
+
+.checkNote {
+  color: var(--c-muted);
+}
+
 .readout {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -168,9 +207,10 @@
 }
 
 /* Holds the block's height while the analysis resolves, so the slate does not
-   jump when the readout lands. Sized to the headline plus the figure row. */
+   jump when the readout lands. Sized to the headline, the pass/fail line and the
+   figure row together. */
 .readoutPending {
-  height: clamp(150px, 16vw, 190px);
+  height: clamp(200px, 21vw, 250px);
 }
 
 /* --- outcome + actions --------------------------------------------------- */

@@ -60,10 +60,19 @@ const ESC_ARM_MS = 4000;
 
 export function DirectorEditor({
   mission,
+  image,
   onLock,
   onExit,
 }: {
   mission: Mission;
+  /**
+   * The frame to edit. Passed in rather than read from `mission.scene`, because
+   * the briefing clip freezes on a different picture than the mission tile uses —
+   * mission 01's tile is the night-city aerial, its freeze is the burning car.
+   * The editor must open on the frame the player was just asked to mark, and the
+   * Cut's analysis measures against this same image.
+   */
+  image: string;
   onLock: (frame: CapturedFrame) => void;
   onExit: () => void;
 }) {
@@ -329,7 +338,7 @@ export function DirectorEditor({
         <CornerBracket corner="br" size="14px" />
         <ImageEditor
           ref={editorRef}
-          image={mission.scene}
+          image={image}
           options={options}
           minHeight="100%"
           onLoad={handleLoad}

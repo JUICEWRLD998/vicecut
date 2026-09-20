@@ -114,6 +114,20 @@ export type FrameReport = {
   spread: number;
   /** Mean per-channel distance across the frame, 0-255. */
   shift: number;
+  /**
+   * Centre of mass of the changed pixels, as fractions of the frame, or null
+   * when nothing changed. This is where the player's mark actually landed.
+   */
+  markCentre: { x: number; y: number } | null;
+  /**
+   * Share of the changed pixels that landed inside the mission's target region,
+   * 0-100. Not the same question as "is the centroid inside it": a mark drawn
+   * right across the frame has a centroid near the middle of the frame, which
+   * may sit inside the region while most of the ink is somewhere else.
+   */
+  onTargetShare: number;
+  /** True when the mark's centre of mass falls within the target region. */
+  onTarget: boolean;
   /** True when the frame was captured from the live canvas, not an editor save. */
   fromCanvas: boolean;
 };
@@ -199,6 +213,12 @@ export async function analyseFrame(
   fromCanvas: boolean,
   /** Whether the editor reported an edit. See FrameReport.edited. */
   edited: boolean,
+  /**
+   * The mission's target region, as fractions of the frame. Optional: a mission
+   * without a briefing has nothing to check against, and the report says so
+   * rather than defaulting to a pass or a fail.
+   */
+  target?: { x: number; y: number; w: number; h: number },
 ): Promise<FrameReport | null> {
   try {
     // Named `locked`, not `edited`: the parameter above already holds the
@@ -216,6 +236,11 @@ export async function analyseFrame(
     let changed = 0;
     let touched = 0;
     let totalDistance = 0;
+    /** Sum of changed-pixel coordinates, for the centre of mass. */
+    let sumX = 0;
+    let sumY = 0;
+    /** Changed pixels landing inside the target region. */
+    let insideTarget = 0;
 
     for (let i = 0; i < a.length; i += 4) {
       const dr = Math.abs(a[i] - b[i]);
@@ -228,11 +253,44 @@ export async function analyseFrame(
       // on one channel and a rounding error on the average, so a mean-based test
       // would score a drawn frame as untouched.
       const peak = Math.max(dr, dg, db);
-      if (peak > CHANGE_THRESHOLD) changed++;
+      if (peak > CHANGE_THRESHOLD) {
+        changed++;
+        // Sample-grid coordinate of this pixel, as a fraction of the frame.
+        const px = (i / 4) % SAMPLE_W;
+        const py = Math.floor(i / 4 / SAMPLE_W);
+        const fx = (px + 0.5) / SAMPLE_W;
+        const fy = (py + 0.5) / SAMPLE_H;
+        sumX += fx;
+        sumY += fy;
+        if (
+          target &&
+          fx >= target.x &&
+          fx <= target.x + target.w &&
+          fy >= target.y &&
+          fy <= target.y + target.h
+        ) {
+          insideTarget++;
+        }
+      }
       if (peak > TOUCH_THRESHOLD) touched++;
     }
 
     const pixels = a.length / 4;
+    const markCentre =
+      changed > 0 ? { x: sumX / changed, y: sumY / changed } : null;
+
+    // "On target" is the mark's centre of mass being inside the region. The
+    // share is reported alongside it because the two can disagree: a mark drawn
+    // right across the frame centres near the middle, which may sit inside the
+    // region while most of the ink is elsewhere. Neither number alone is the
+    // whole answer, so both are shown.
+    const onTarget =
+      !!target &&
+      !!markCentre &&
+      markCentre.x >= target.x &&
+      markCentre.x <= target.x + target.w &&
+      markCentre.y >= target.y &&
+      markCentre.y <= target.y + target.h;
 
     // One decimal, not a whole number. A single drawn stroke covers a few tenths
     // of a percent of a 4K frame, so rounding to integers reported "ALTERED 0%"
@@ -253,6 +311,15 @@ export async function analyseFrame(
       coverage: pct(changed),
       spread: pct(touched),
       shift: Math.round(totalDistance / pixels),
+      markCentre,
+      // Share OF THE MARK, not of the frame. Dividing by `pixels` here was a bug
+      // the target probe caught: a stroke covering 500 of the 57,600 sampled
+      // pixels is 0.9% of the frame but 100% of the mark, so the frame-based
+      // figure printed "0% of the mark inside" on a pass where the whole mark was
+      // inside the region. The label and the number have to describe the same
+      // denominator or the readout contradicts itself.
+      onTargetShare: changed > 0 ? Math.round((insideTarget / changed) * 100) : 0,
+      onTarget,
       fromCanvas,
     };
   } catch {

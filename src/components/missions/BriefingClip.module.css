@@ -1,0 +1,245 @@
+/* THE BRIEFING CLIP. Pairs with BriefingClip.tsx.
+   The clip owns the whole frame while it plays; at the freeze the left column
+   becomes the written brief and the picture holds on the right, so the two
+   halves of the screen have one job each. Mirrors the brief's own composition
+   so the transition into the editor does not feel like arriving somewhere new. */
+
+.stage {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* One slow push across the whole run, like the title sequence — a single
+   continuous camera move rather than a push per still, which would restart on
+   every cut and read as a stutter.
+
+   It stops at the freeze. That is the mechanism: the picture is no longer
+   moving because it is no longer being shot. */
+.frames {
+  position: absolute;
+  inset: 0;
+  animation: briefingPush 6s linear both;
+  animation-play-state: running;
+}
+
+.stage[data-frozen="true"] .frames {
+  animation-play-state: paused;
+}
+
+@keyframes briefingPush {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.05);
+  }
+}
+
+.frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  /* Hard cut, not a crossfade. A cut is what makes this read as footage; a
+     crossfade would make it read as a slideshow, which is the exact failure
+     this component exists to avoid. */
+  transition: opacity 0ms;
+}
+
+.frame[data-active="true"] {
+  opacity: 1;
+}
+
+/* Regraded per phase: while playing the scrim is light, because the footage is
+   the point. At the freeze it deepens on the left so the brief is readable over
+   a frame that deliberately keeps its fire in the middle. */
+.scrim {
+  position: absolute;
+  inset: 0;
+  transition: background var(--t-scene) var(--ease-out);
+  background:
+    linear-gradient(
+      0deg,
+      rgba(9, 10, 12, 0.72) 0%,
+      rgba(9, 10, 12, 0.26) 24%,
+      rgba(9, 10, 12, 0) 48%
+    ),
+    linear-gradient(180deg, rgba(9, 10, 12, 0.42) 0%, rgba(9, 10, 12, 0) 26%),
+    rgba(9, 10, 12, 0.14);
+}
+
+.stage[data-frozen="true"] .scrim {
+  background: linear-gradient(
+    100deg,
+    rgba(9, 10, 12, 0.93) 0%,
+    rgba(9, 10, 12, 0.85) 30%,
+    rgba(9, 10, 12, 0.4) 52%,
+    rgba(9, 10, 12, 0.06) 76%,
+    rgba(9, 10, 12, 0.2) 100%
+  );
+}
+
+/* Seeded turbulence, same texture the shell uses. Local to this screen: the
+   shell's own grain is switched off here so the two do not stack and double. */
+.grain {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-overlay);
+  pointer-events: none;
+  opacity: 0.038;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+}
+
+/* --- camera HUD (§19) ---------------------------------------------------- */
+
+.camera {
+  position: absolute;
+  top: var(--s-7);
+  left: var(--s-8);
+  right: var(--s-8);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+}
+
+.rec {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--c-accent);
+}
+
+/* --- body ---------------------------------------------------------------- */
+
+.body {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 100vh;
+  min-height: 100dvh;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: var(--s-7) var(--s-8) var(--s-8);
+}
+
+.duringPlay {
+  opacity: 0.85;
+}
+
+/* At the freeze the body centres instead of sitting on the floor: the frame is
+   being examined, not watched. */
+.stage[data-frozen="true"] .body {
+  justify-content: center;
+  max-width: 760px;
+  margin: 0;
+}
+
+.freeze {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  max-width: 44ch;
+}
+
+.beat {
+  margin: 0;
+}
+
+.objective {
+  margin-top: var(--s-3);
+  padding-left: var(--s-5);
+  border-left: 2px solid var(--c-accent);
+}
+
+.objectiveLabel {
+  display: block;
+  margin-bottom: var(--s-2);
+  color: var(--c-accent);
+}
+
+.prompt {
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+  margin-top: var(--s-5);
+  padding-top: var(--s-5);
+  border-top: var(--rule) solid var(--c-line);
+}
+
+.promptHint {
+  color: var(--c-muted);
+}
+
+/* --- progress rule ------------------------------------------------------- */
+
+.ruleWrap {
+  position: absolute;
+  left: var(--s-8);
+  right: var(--s-8);
+  bottom: var(--s-7);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  max-width: 640px;
+}
+
+.rule {
+  position: relative;
+  height: var(--rule);
+  background: var(--c-line-strong);
+  overflow: hidden;
+}
+
+.ruleFill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left;
+  background: var(--c-accent);
+}
+
+.ruleCaption {
+  color: var(--c-muted);
+}
+
+/* The live region carries this text to assistive tech; the visible copy is
+   aria-hidden so a screen reader hears one sentence instead of a slug. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 900px) {
+  .camera,
+  .ruleWrap {
+    left: var(--s-5);
+    right: var(--s-5);
+  }
+  .body,
+  .stage[data-frozen="true"] .body {
+    margin: 0 auto;
+    max-width: none;
+    padding: var(--s-6) var(--s-5);
+  }
+  .prompt {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--s-4);
+  }
+}

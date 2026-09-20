@@ -7,7 +7,7 @@ import { CornerBracket } from "@/components/ui/CornerBracket";
 import { Display, Metadata, Prose } from "@/components/ui/Typography";
 import { analyseFrame, classifyEdit, takeNumber, type FrameReport } from "@/lib/frame";
 import { T_SCENE, exposureFlash, fadeIn, riseIn, staggerContainer } from "@/lib/motion";
-import type { Mission } from "@/data/missions";
+import { editableFrame, type Mission } from "@/data/missions";
 import styles from "./DirectorCut.module.css";
 
 /**
@@ -107,7 +107,18 @@ export function DirectorCut({
   useEffect(() => {
     let cancelled = false;
 
-    analyseFrame(mission.scene, frame.dataUrl, frame.degraded, frame.edited).then((r) => {
+    // Baseline is `editableFrame`, NOT `mission.scene`. The editor opened on the
+    // briefing's freeze frame, and mission 01's `scene` is a different picture
+    // (the night-city aerial vs the burning car). Measuring against the wrong one
+    // would report almost the whole frame as changed on a frame nobody touched.
+    // Both sides read from the same helper so they cannot drift apart.
+    analyseFrame(
+      editableFrame(mission),
+      frame.dataUrl,
+      frame.degraded,
+      frame.edited,
+      mission.briefing?.target,
+    ).then((r) => {
       if (cancelled) return;
       setReport(r);
       setMeasured(true);
@@ -116,7 +127,7 @@ export function DirectorCut({
     return () => {
       cancelled = true;
     };
-  }, [frame.dataUrl, frame.degraded, frame.edited, mission.scene]);
+  }, [frame.dataUrl, frame.degraded, frame.edited, mission]);
 
   useEffect(() => {
     // Reduced motion keeps every beat but collapses the waits, rather than
@@ -242,6 +253,24 @@ export function DirectorCut({
                   <p className={styles.figureHeadline}>
                     {editLabel(report, mission.slate.verdict)}
                   </p>
+
+                  {/* The pass/fail line. Only shown when the mission declares a
+                      target region — without one there is nothing to check, and
+                      a verdict would be invented. Both numbers are reported: the
+                      centre-of-mass verdict can read ON TARGET while most of the
+                      ink sits elsewhere (a mark drawn right across the frame
+                      centres near the middle), so the share is what says how much
+                      of the mark actually landed. */}
+                  {mission.briefing ? (
+                    <div className={styles.check} data-pass={report.onTarget}>
+                      <Metadata className={styles.checkLabel}>
+                        {report.onTarget ? "Mark on target" : "Mark off target"}
+                      </Metadata>
+                      <Metadata className={styles.checkNote}>
+                        {`${Math.round(report.onTargetShare)}% of the mark inside the moment`}
+                      </Metadata>
+                    </div>
+                  ) : null}
 
                   <dl className={styles.readout}>
                     <div className={styles.cell}>

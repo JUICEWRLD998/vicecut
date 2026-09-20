@@ -21,6 +21,7 @@ Two derived sets also ship, both cut from the files above and re-encoded smaller
 |---|---|---|
 | `public/seq/` | Title → mission-select sequence (6 stills, §22) | Screenshots bundle — Vice City, Ambrosia, Leonida Keys, Mount Kalaga, Port Gellhorn |
 | `public/ground/operation-select.jpg` | `/missions` backdrop, blurred | `public/seq/01-Vice_City_01.jpg`, downscaled to 1100×619 and blurred |
+| `public/briefs/` | Pre-edit briefing clip freeze frames (§10-12) | Screenshots bundle — `Jason_Duval_06`, `Jason_and_Lucia_08`, `Port_Gellhorn_01` |
 
 `operation-select.jpg` is the first frame of the sequence, chosen so the backdrop is
 already decoded and in cache by the time `/missions` mounts. It is baked smaller and
@@ -28,6 +29,48 @@ pre-softened rather than being the 1920px seq frame run through a live blur: the
 destroys the detail anyway, and a full-viewport CSS blur on a 1920px source is a
 per-frame GPU cost. At 1100×619 it is 43KB, and the compositor only has to upscale it.
 Re-derive with `sharp().resize({width: 1100}).blur(2).jpeg({quality: 80})`.
+
+`public/briefs/` holds the frames the briefing clip freezes on. Each mission's target
+region is derived from its freeze frame, not placed by eye — see the note below.
+
+## Why the briefing clip is stills, not trailer footage
+
+The clip was planned around official trailer video. It was sourced, examined, and
+rejected. The findings, kept because "we already have the stills" is the sort of
+decision that gets silently reversed later:
+
+- **The trailers contain no usable beat.** Trailer 1 (`GTAVI_Trailer_1.mp4`, 680MB,
+  3840×2160, 90s) is a lifestyle montage — barbed wire at sunset, beach aerials, a
+  nightclub, a pool party. There is no "the meet is compromised" to freeze on, so a
+  five-second cut of it is a mood rather than a moment, and the frame the player is
+  asked to mark has no authored meaning.
+- **The codec will not play in a browser.** It is `mpeg4` (MPEG-4 Part 2), not H.264,
+  so every clip would need re-encoding before it renders at all.
+- **The bundled "video clips" are not scenes.** `GTAVI_Videos.zip` (120MB) ships nine
+  files; the character clips are 1.0–1.5s loops (Jason 1.0s / 30 frames, Lucia 1.5s /
+  45 frames). Only the cover-art animation is substantial, at 32.7s.
+- **It carries frames this project's own content bar rejects.** The trailer has two
+  pool-party shots, a nightclub interior, and a frame captioned "Neighborhood watch
+  teen shot, found around in Hamlet" — the same standard that rejected `Vice_City_06`
+  and `Port_Gellhorn_04`. It also opens on an ESRB "inappropriate for children" card,
+  which would be the first frame a judge sees.
+- **The Extended Look is the only real gameplay source**, at 13.4GB, but it carries
+  HUD, subtitles and streamer chrome through most of it, so a clean plate means
+  cutting around all of it.
+
+Trailer URLs, for the record, are directly downloadable from Rockstar's own CDN
+(`media-rockstargames-com.akamaized.net/VI/downloads/videos/…`), and their media page
+invites sharing. The blocker was content and codec, not availability.
+
+**Deriving the target regions.** Each freeze frame's target region is computed from the
+image. The first measure — `luminance × saturation` per grid cell — latched onto a flat
+sunset sky on `Port_Gellhorn_06`, scoring an empty gradient like a lit subject. The
+measure that works multiplies in a high-pass term (how far a pixel departs from its
+blurred neighbourhood), so bright *and* detailed wins and bright *and* flat no longer
+scores. Regions were then drawn onto their frames and checked visually: the scores
+alone would not have caught the sky, because a wrong region still produces a
+plausible-looking number.
+
 
 
 ## Where they came from, and the URLs to re-fetch them
