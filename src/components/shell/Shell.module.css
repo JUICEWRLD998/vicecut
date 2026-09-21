@@ -74,3 +74,21 @@
     rgba(0, 0, 0, 0) 6px
   );
 }
+
+/* The audio toggle (§34). Bottom-right, above the shell's own layers, below the
+   editor's. Fixed, because it belongs to the session rather than to a screen —
+   it must stay reachable at the freeze and on the result, and both of those
+   scroll. */
+.audioToggle {
+  position: fixed;
+  right: var(--s-6);
+  bottom: var(--s-6);
+  z-index: calc(var(--z-hud) + 2);
+}
+
+@media (max-width: 900px) {
+  .audioToggle {
+    right: var(--s-4);
+    bottom: var(--s-4);
+  }
+}

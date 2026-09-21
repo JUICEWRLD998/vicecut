@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { CornerBracket } from "@/components/ui/CornerBracket";
 import { Display, Metadata, Prose } from "@/components/ui/Typography";
 import type { Briefing } from "@/data/missions";
+import { audio } from "@/lib/audio";
 import { fadeIn, riseIn, staggerContainer } from "@/lib/motion";
 import styles from "./BriefingClip.module.css";
 
@@ -57,6 +58,8 @@ export function BriefingClip({
 }) {
   const reduceMotion = useReducedMotion();
   const reduced = reduceMotion === true;
+  /** The audio engine, or null on the server / when Web Audio is unavailable. */
+  const sound = audio();
 
   const frames = briefing.frames;
   const sceneCount = frames.length;
@@ -66,6 +69,54 @@ export function BriefingClip({
 
   const finished = useRef(false);
   const timers = useRef<number[]>([]);
+
+  /** The beat for the frame currently on screen: its slate label and radio. */
+  const activeBeat = briefing.beats?.[index];
+
+  /**
+   * Audio (§34).
+   *
+   * The context can only be created inside a user gesture. The gesture that got
+   * us here is the click on DIRECT SCENE, so unlocking on mount is sufficient in
+   * practice; the engine is idempotent, so calling it again is free.
+   *
+   * Everything below is fire-and-forget. If the browser has no Web Audio, or
+   * blocks it, or the player has muted, `sound` is simply silent and no part of
+   * the clip depends on it — §34 requires the app to stay fully functional with
+   * audio off, and that is easier to guarantee by never reading audio state than
+   * by checking it everywhere.
+   */
+  useEffect(() => {
+    if (!sound) return;
+    sound.unlock();
+    // A beat late rather than immediate, so the bed does not begin underneath the
+    // screen transition into the clip.
+    const start = window.setTimeout(() => sound.startBed(), 150);
+    return () => {
+      window.clearTimeout(start);
+      sound.stopBed();
+    };
+  }, [sound]);
+
+  /**
+   * A splice on every cut, and a squelch when the beat carries a transmission.
+   *
+   * The squelch is offset just behind the cut so the two read as one event —
+   * picture first, then the radio opening — instead of as a doubled click. The
+   * first frame is skipped: there is no cut INTO the clip.
+   */
+  useEffect(() => {
+    if (!sound || index === 0) return;
+    sound.cue("cut");
+    if (!activeBeat?.radio) return;
+    const squelch = window.setTimeout(() => sound.cue("radioIn"), 90);
+    return () => window.clearTimeout(squelch);
+  }, [activeBeat, index, sound]);
+
+  /** The shutter, at the freeze. This is the moment the frame is taken. */
+  useEffect(() => {
+    if (phase === "frozen") sound?.cue("lock");
+  }, [phase, sound]);
 
   /**
    * Reduced motion: no cut sequence. It holds the first still briefly and goes
@@ -159,12 +210,15 @@ export function BriefingClip({
 
   return (
     <div className={styles.stage} data-frozen={frozen}>
-      {/* Every still mounts at once so a cut never lands on a decoding frame. */}
+      {/* Every still mounts at once so a cut never lands on a decoding frame.
+          Keyed by INDEX, not by src: mission 03's clip deliberately bookends on
+          the same image, and keying on the path would collapse those two frames
+          into one — the clip would silently lose a beat. */}
       <div className={styles.frames}>
         {frames.map((src, i) => (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            key={src}
+            key={`${i}-${src}`}
             className={styles.frame}
             src={src}
             alt=""
@@ -194,11 +248,45 @@ export function BriefingClip({
       </motion.div>
 
       <div className={styles.body}>
-        {/* --- playback: the world, then the cut ------------------------ */}
+        {/* --- playback: the world, then the cut ------------------------
+            Each frame carries a slate label, and the beats that have a
+            transmission show it as radio dialogue (§19). The dialogue changes
+            WITH its picture, not over the clip as a whole, so the last line
+            lands on the freeze — the player hears it go wrong at the same instant
+            they see it. */}
         {!frozen ? (
-          <Metadata className={styles.duringPlay} tone="paper">
-            Rolling
-          </Metadata>
+          <>
+            <motion.div
+              key={`slate-${index}`}
+              className={styles.slate}
+              variants={fadeIn}
+              initial="hidden"
+              animate="visible"
+            >
+              <Metadata className={styles.slateLabel} tone="paper">
+                {activeBeat?.label ?? missionName}
+              </Metadata>
+            </motion.div>
+
+            {activeBeat?.radio ? (
+              // Keyed on the frame so React re-runs the entrance on each cut
+              // rather than swapping the text in place, which reads as a caption
+              // changing rather than as someone speaking.
+              <motion.div
+                key={`radio-${index}`}
+                className={styles.radio}
+                variants={riseIn}
+                initial="hidden"
+                animate="visible"
+              >
+                <Metadata className={styles.radioLabel}>[ Radio ]</Metadata>
+                <Prose size="lead" tone="paper">
+                  <span className={styles.radioWho}>{activeBeat.radio.who}:</span>{" "}
+                  &ldquo;{activeBeat.radio.line}&rdquo;
+                </Prose>
+              </motion.div>
+            ) : null}
+          </>
         ) : null}
 
         {/* --- freeze: the objective and the mark prompt ---------------- */}
@@ -263,11 +351,15 @@ export function BriefingClip({
         </div>
       ) : null}
 
-      {/* Read out the clip for assistive tech as one sentence, not as chrome. */}
+      {/* Read out the clip for assistive tech as one sentence, not as chrome.
+          The radio line is included because the beats change on a timer: without
+          it, the transmission is only in the DOM, never announced. */}
       <p className={styles.srOnly} role="status" aria-live="polite">
         {frozen
           ? `Frame held. ${briefing.beat} Mark the frame where it goes wrong.`
-          : `Briefing clip playing, frame ${Math.min(index + 1, total)} of ${total}.`}
+          : `Briefing clip, frame ${Math.min(index + 1, total)} of ${total}${
+              activeBeat?.label ? `: ${activeBeat.label}` : ""
+            }.${activeBeat?.radio ? ` Radio. ${activeBeat.radio.who}: ${activeBeat.radio.line}` : ""}`}
       </p>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Metadata, Prose } from "@/components/ui/Typography";
 import type { DebriefQuestion, DebriefVerdict } from "@/lib/debrief";
@@ -29,6 +29,71 @@ type Stage = "starting" | "asking" | "judging" | "done" | "absent";
 
 /** How long to wait before admitting the panel is loading. */
 const LOADING_VISIBLE_AFTER = 700;
+
+type QuestionsBody = {
+  mission: {
+    name: string;
+    location: string;
+    instruction: string;
+    objective: string;
+    radio: { who: string; line: string };
+  };
+  report: {
+    coverage: number;
+    spread: number;
+    onTarget: boolean;
+    onTargetShare: number;
+    edited: boolean;
+    format: string;
+  } | null;
+  verdict: string | null;
+  score: { framing: number; composition: number; control: number; final: number } | null;
+};
+
+async function post(body: Record<string, unknown>): Promise<unknown> {
+  try {
+    const res = await fetch("/api/debrief", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    // Network failure, abort, no key, model down. All mean "no debrief".
+    return null;
+  }
+}
+
+/**
+ * The questions request, cached per scene.
+ *
+ * WHY THIS IS PRE-WARMED, and why it mattered enough to move out of the
+ * component: the panel originally started its request when the result beat
+ * arrived, so the questions landed ~3s later — measured at 13.3s after LOCK
+ * FRAME. Combined with sitting low in a scrollable panel, the result was that a
+ * judge could complete a whole mission and never see the feature at all, which
+ * is exactly what happened.
+ *
+ * So the cinematic fires this as soon as the frame has been measured (about a
+ * second in, well before the result beat at 8s), and the panel then reads an
+ * already-resolved promise and renders filled. The cache also means the two
+ * callers cannot produce two requests for the same scene.
+ */
+let inflight: { key: string; promise: Promise<DebriefQuestion[] | null> } | null = null;
+
+export function requestQuestions(body: QuestionsBody): Promise<DebriefQuestion[] | null> {
+  const key = body.mission.name;
+  if (inflight?.key === key) return inflight.promise;
+
+  const promise = post({ kind: "questions", ...body }).then((data) => {
+    const qs = (data as { questions?: DebriefQuestion[] } | null)?.questions;
+    return Array.isArray(qs) && qs.length > 0 ? qs : null;
+  });
+
+  inflight = { key, promise };
+  return promise;
+}
 
 export function Debrief({
   mission,
@@ -60,57 +125,26 @@ export function Debrief({
   const [result, setResult] = useState<DebriefVerdict | null>(null);
   const [showLoading, setShowLoading] = useState(false);
 
-  /** Aborts the in-flight request when the component goes away or the mission
-   *  changes, so a roll-again cannot land the previous debrief on a new frame. */
-  const inFlight = useRef<AbortController | null>(null);
-
-  const post = useCallback(async (body: Record<string, unknown>) => {
-    inFlight.current?.abort();
-    const controller = new AbortController();
-    inFlight.current = controller;
-
-    try {
-      const res = await fetch("/api/debrief", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-      if (!res.ok) return null;
-      return (await res.json()) as unknown;
-    } catch {
-      // Network failure, or the abort above. Both mean the same thing here.
-      return null;
-    }
-  }, []);
-
   /**
    * Fetch the questions on mount.
    *
-   * The component is remounted per mission — its parent passes
-   * `key={mission.name}` — so this effect only ever runs once per scene and does
-   * not need to reset state on the way in. That is deliberate: resetting state
-   * synchronously in an effect body causes a cascading render, and doing it here
-   * would mean the panel re-rendered twice before its first fetch even left.
-   * Remounting is how React is meant to handle "start over for a new subject".
+   * The request itself lives in `requestQuestions`, which the cinematic has
+   * usually already fired — so this normally resolves from an in-flight or
+   * settled promise rather than starting a round trip at the last moment. The
+   * component is remounted per mission (`key={mission.name}`), so there is no
+   * state to reset on the way in: resetting it here would cause a cascading
+   * render for no benefit.
    */
   useEffect(() => {
     let cancelled = false;
     const reveal = window.setTimeout(() => setShowLoading(true), LOADING_VISIBLE_AFTER);
 
     void (async () => {
-      const data = await post({
-        kind: "questions",
-        mission,
-        report,
-        verdict,
-        score,
-      });
+      const qs = await requestQuestions({ mission, report, verdict, score });
       if (cancelled) return;
-
-      const qs = (data as { questions?: DebriefQuestion[] } | null)?.questions;
-      if (!Array.isArray(qs) || qs.length === 0) {
-        // No key configured, model unreachable, or an unusable payload. Hide.
+      if (!qs) {
+        // No key configured, model unreachable, or an unusable payload. Hide the
+        // panel completely rather than showing an error inside the result.
         setStage("absent");
         return;
       }
@@ -121,11 +155,10 @@ export function Debrief({
     return () => {
       cancelled = true;
       window.clearTimeout(reveal);
-      inFlight.current?.abort();
     };
-    // Mount-only. `mission.name` is the identity of the scene, and the parent's
-    // key already guarantees a fresh mount when it changes; the rest is captured
-    // per mount so re-running on a measurement tick would refetch mid-answer.
+    // Mount-only. `mission.name` is the identity of the scene and the parent's
+    // key already forces a fresh mount when it changes; the rest is captured per
+    // mount, so re-running on a measurement tick would refetch mid-answer.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -153,7 +186,7 @@ export function Debrief({
     }
     setResult(v);
     setStage("done");
-  }, [allAnswered, answers, mission, post, questions, report, score, verdict]);
+  }, [allAnswered, answers, mission, questions, report, score, verdict]);
 
   if (stage === "absent") return null;
 

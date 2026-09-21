@@ -1,0 +1,64 @@
+/* The audio toggle (§24, §34).
+   Deliberately the quietest control in the product: it sits on the HUD rule, uses
+   metadata type, and never animates on its own. Its only job is to be findable
+   without competing with the scene. */
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  border: var(--rule) solid transparent;
+  cursor: pointer;
+  color: var(--c-muted);
+  transition:
+    color var(--t-ui) var(--ease-out),
+    border-color var(--t-ui) var(--ease-out);
+}
+
+.toggle:hover {
+  color: var(--c-paper);
+  border-color: var(--c-line-strong);
+}
+
+/* Three bars, shown as a static level meter. Not animated: a moving meter next
+   to a still frame draws the eye to the control instead of the picture. */
+.bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 11px;
+}
+
+.bar {
+  width: 2px;
+  background: currentColor;
+}
+
+.bar:nth-child(1) {
+  height: 5px;
+}
+
+.bar:nth-child(2) {
+  height: 11px;
+}
+
+.bar:nth-child(3) {
+  height: 7px;
+}
+
+/* Muted collapses the meter to a single low stub, so the state is legible at a
+   glance without reading the label. */
+.bars[data-muted="true"] .bar:nth-child(2),
+.bars[data-muted="true"] .bar:nth-child(3) {
+  height: 3px;
+  opacity: 0.5;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--track-meta);
+  text-transform: uppercase;
+  white-space: nowrap;
+}

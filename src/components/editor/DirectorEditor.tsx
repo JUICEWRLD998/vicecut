@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { CornerBracket } from "@/components/ui/CornerBracket";
 import { Metadata } from "@/components/ui/Typography";
 import type { Mission } from "@/data/missions";
+import { audio } from "@/lib/audio";
 import { T_SCENE } from "@/lib/motion";
 import { motion } from "motion/react";
 import styles from "./DirectorEditor.module.css";
@@ -233,6 +234,13 @@ export function DirectorEditor({
 
     pendingLock.current = true;
     setDeveloping(true);
+    // The shutter, fired on the PRESS rather than when the frame comes back.
+    //
+    // Two reasons. The save takes seconds on a 4K frame, and the button label
+    // changing to "Developing" is thin feedback for that long — the shutter
+    // closes the loop immediately. And it is the honest sound: the player has
+    // taken the shot, whatever the encoder is doing about it.
+    audio()?.cue("lock");
     saveButton.click();
 
     // Do not strand the player on a button that does nothing if the save never

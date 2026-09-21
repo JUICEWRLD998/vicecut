@@ -5,7 +5,8 @@ import { motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/Button";
 import { CornerBracket } from "@/components/ui/CornerBracket";
 import { Display, Metadata, Prose } from "@/components/ui/Typography";
-import { Debrief } from "@/components/missions/Debrief";
+import { Debrief, requestQuestions } from "@/components/missions/Debrief";
+import { audio } from "@/lib/audio";
 import {
   analyseFrame,
   classifyEdit,
@@ -114,6 +115,8 @@ export function MissionCinematic({
 }) {
   const reduceMotion = useReducedMotion();
   const reduced = reduceMotion === true;
+  /** The audio engine, or null on the server / with no Web Audio (§34). */
+  const sound = audio();
 
   const [phase, setPhase] = useState<Phase>("frame");
   const [report, setReport] = useState<FrameReport | null>(null);
@@ -262,6 +265,67 @@ export function MissionCinematic({
       setDivider(100);
     }
   }, []);
+
+  /**
+   * The ambience bed, and the cues that mark each beat (§34).
+   *
+   * One effect keyed on `phase` rather than a cue per beat timer: the phase IS
+   * the beat, so a cue can never fire out of step with the thing it marks. The
+   * bed restarts here because the briefing clip stopped its own on the way out,
+   * and the mission should not fall silent between the two.
+   */
+  useEffect(() => {
+    if (!sound) return;
+    sound.unlock();
+    sound.startBed();
+    return () => sound.stopBed();
+  }, [sound]);
+
+  useEffect(() => {
+    if (!sound) return;
+    // A squelch when the radio beat lands, so the transmission is heard as a
+    // transmission rather than only read as a line of text.
+    if (phase === "radio") sound.cue("radioIn");
+    // The completion sound, on the result (§34's "mission completion").
+    if (phase === "result") sound.cue("confirm");
+  }, [phase, sound]);
+
+  /**
+   * Pre-warm the AI debrief, as soon as the frame has been measured.
+   *
+   * This is what makes the feature actually land on screen. The panel used to
+   * start its own request when the result beat arrived at 8s, so the questions
+   * appeared around 13s after LOCK FRAME — by which time a judge scrolling a
+   * finished mission had already moved on. Measured: a full mission could be
+   * completed with the feature never seen.
+   *
+   * Firing here means the request is in hand roughly 7s before it is needed, and
+   * `requestQuestions` caches per scene so the panel reads the same promise
+   * rather than issuing a second call. The model sees the same measurements
+   * either way — the only thing that moved is WHEN we asked.
+   */
+  useEffect(() => {
+    if (!measured || !report) return;
+    void requestQuestions({
+      mission: {
+        name: mission.name,
+        location: mission.location,
+        instruction: mission.instruction,
+        objective: mission.objective,
+        radio: mission.radio,
+      },
+      report: {
+        coverage: report.coverage,
+        spread: report.spread,
+        onTarget: report.onTarget,
+        onTargetShare: report.onTargetShare,
+        edited: report.edited,
+        format: report.format,
+      },
+      verdict: editLabel(report, mission.slate.verdict),
+      score: directorScore(report),
+    });
+  }, [measured, mission, report]);
 
   const take = takeNumber(report);
   const score = report ? directorScore(report) : null;
@@ -438,6 +502,7 @@ export function MissionCinematic({
           initial="hidden"
           animate="visible"
         >
+          <div className={styles.main}>
           <motion.div className={styles.resultHead} variants={fadeIn}>
             <Metadata tone="accent">Director&rsquo;s cut</Metadata>
             <Metadata>
@@ -561,13 +626,22 @@ export function MissionCinematic({
               </Metadata>
             </motion.div>
           ) : null}
+          </div>
 
           {/* --- the AI debrief ---------------------------------------------
-              Mounted last and entirely self-contained: it never gates the
-              result, and it renders nothing at all when it cannot reach a model.
-              That is deliberate — the demo's core loop must not depend on a
-              network call, so this is an extra and never a step. */}
-          <motion.div variants={riseIn}>
+              In the SIDE COLUMN on wide screens, and that placement is the fix
+              for a real bug rather than a style choice. Stacked, the result
+              panel's content measured 1603px inside a 900px box, which put the
+              questions at y 818..984 — below the fold. A judge who completed a
+              mission and did not scroll never saw the feature at all. In the
+              side column the questions sit near the top of the panel and are
+              visible alongside the score.
+
+              Entirely self-contained: it never gates the result, and renders
+              nothing at all when it cannot reach a model. The demo's core loop
+              must not depend on a network call, so this is an extra and never a
+              step. */}
+          <motion.aside className={styles.side} variants={riseIn}>
             <Debrief
               // Remount per mission, so the panel starts clean for a new scene
               // rather than resetting its own state on the way in.
@@ -594,7 +668,7 @@ export function MissionCinematic({
               verdict={report ? editLabel(report, mission.slate.verdict) : null}
               score={score ? { framing: score.framing, composition: score.composition, control: score.control, final: score.final } : null}
             />
-          </motion.div>
+          </motion.aside>
 
           <motion.footer className={styles.foot} variants={fadeIn}>
             <div className={styles.actions}>

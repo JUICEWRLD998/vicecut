@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { AudioToggle } from "@/components/ui/AudioToggle";
 import styles from "./Shell.module.css";
 
 /**
@@ -49,17 +50,27 @@ export function GameShell({
   grain = true,
   vignette = true,
   scanlines = false,
+  audio = false,
   children,
 }: {
   intensity?: "default" | "light";
   grain?: boolean;
   vignette?: boolean;
   scanlines?: boolean;
+  /**
+   * Show the audio toggle (§34).
+   *
+   * Opt-in per surface rather than always-on: the title and mission select have
+   * no sound of their own, and a mute button on a silent screen is a control
+   * that does nothing. The screens that actually make noise turn it on.
+   */
+  audio?: boolean;
   children: ReactNode;
 }) {
   return (
     <div className={styles.shell} data-intensity={intensity}>
       {children}
+      {audio ? <AudioToggle className={styles.audioToggle} /> : null}
       {vignette ? <Vignette scope="viewport" /> : null}
       {scanlines ? <Scanlines scope="viewport" /> : null}
       {grain ? <FilmGrain scope="viewport" /> : null}

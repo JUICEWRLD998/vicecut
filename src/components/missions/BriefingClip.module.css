@@ -131,8 +131,38 @@
   padding: var(--s-7) var(--s-8) var(--s-8);
 }
 
-.duringPlay {
-  opacity: 0.85;
+/* --- playback chrome (§19) ----------------------------------------------
+   The slate label and the radio dialogue. Both sit in the lower third, on the
+   scrim, in the order they are read: what we are looking at, then who is
+   talking. The radio is indented behind a rule so the two do not read as one
+   block of text. */
+
+.slate {
+  margin-bottom: var(--s-3);
+}
+
+.slateLabel {
+  letter-spacing: var(--track-meta);
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.radio {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding-left: var(--s-5);
+  border-left: 2px solid var(--c-accent-line);
+  max-width: 52ch;
+}
+
+.radioLabel {
+  color: var(--c-accent);
+}
+
+.radioWho {
+  color: var(--c-paper);
+  font-variation-settings: "wght" 640;
 }
 
 /* At the freeze the body centres instead of sitting on the floor: the frame is

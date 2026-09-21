@@ -102,7 +102,7 @@ export function MissionStage({ mission }: { mission: Mission }) {
 
   if (stage === "locked" && locked) {
     return (
-      <GameShell intensity="light" vignette={false} grain={false}>
+      <GameShell intensity="light" vignette={false} grain={false} audio>
         <MissionCinematic
           mission={mission}
           frame={locked}
@@ -116,7 +116,7 @@ export function MissionStage({ mission }: { mission: Mission }) {
 
   if (stage === "clip" && mission.briefing) {
     return (
-      <GameShell intensity="light" vignette={false} grain={false}>
+      <GameShell intensity="light" vignette={false} grain={false} audio>
         <BriefingClip
           briefing={mission.briefing}
           missionName={mission.name}
@@ -130,7 +130,7 @@ export function MissionStage({ mission }: { mission: Mission }) {
 
   if (stage === "direct") {
     return (
-      <GameShell intensity="light" vignette={false} grain={false}>
+      <GameShell intensity="light" vignette={false} grain={false} audio>
         <DirectorEditor
           mission={mission}
           image={editableFrame(mission)}

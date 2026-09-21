@@ -87,13 +87,19 @@
 }
 
 .stage[data-phase="result"] .scrim {
+  /* Held dark further right than the single-column layout needed. The debrief
+     now occupies a second column out to ~1080px, which on a 1440 viewport is
+     75% of the width — and the old scrim had already faded to ~0.3 by there, so
+     measured text contrast dropped. The scrim follows the CONTENT, not a fixed
+     fraction, which is the same rule the Cut learned: hold the dark across the
+     full width of the text, and only then release it. */
   background: linear-gradient(
     100deg,
     rgba(9, 10, 12, 0.95) 0%,
-    rgba(9, 10, 12, 0.93) 50%,
-    rgba(9, 10, 12, 0.55) 66%,
-    rgba(9, 10, 12, 0.1) 84%,
-    rgba(9, 10, 12, 0.24) 100%
+    rgba(9, 10, 12, 0.94) 58%,
+    rgba(9, 10, 12, 0.88) 75%,
+    rgba(9, 10, 12, 0.4) 88%,
+    rgba(9, 10, 12, 0.12) 100%
   );
 }
 
@@ -240,7 +246,13 @@
 /* A scroll container rather than a fixed panel: the result carries the readout,
    the score, the debrief and the actions, and on a short viewport that is taller
    than the screen. Scrolling is the honest answer; compressing the type to fit
-   would be the dishonest one. */
+   would be the dishonest one.
+
+   Two columns where there is room. This is not decoration — stacked, the content
+   measured 1603px inside a 900px viewport and pushed the debrief questions to
+   y 818..984, i.e. off the bottom of the screen. The AI feature was invisible to
+   any judge who did not scroll. Side by side, the questions sit near the top of
+   the second column and are readable the moment the result lands. */
 .result {
   position: absolute;
   inset: 0;
@@ -248,10 +260,39 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: var(--s-7) var(--s-8) var(--s-8);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 400px);
+  align-content: start;
+  gap: var(--s-5) var(--s-8);
+  max-width: 1080px;
+}
+
+/* Left column: the verdict, the readout, the score, then the actions. */
+.main {
+  grid-column: 1;
+  grid-row: 1;
   display: flex;
   flex-direction: column;
   gap: var(--s-5);
-  max-width: 720px;
+  min-width: 0;
+}
+
+/* Right column: the debrief. Spans both rows so a long debrief can sit beside
+   the actions rather than forcing the footer down. A hairline on its inner edge
+   separates the two columns; the debrief's own top rule is suppressed below,
+   because a rule running the width of a column reads as a heading rule rather
+   than as a divider between two things side by side. */
+.side {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  min-width: 0;
+  padding-left: var(--s-8);
+  border-left: var(--rule) solid var(--c-line);
+}
+
+.foot {
+  grid-column: 1;
+  grid-row: 2;
 }
 
 .resultHead {
@@ -434,6 +475,34 @@
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
+}
+
+@media (max-width: 1180px) {
+  /* Single column below this width. The debrief returns to the bottom of the
+     stack, which is where it has to be when there is no second column — a
+     narrower viewport genuinely cannot show both at once, and scrolling to it is
+     then the only honest option. */
+  .result {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 720px;
+  }
+
+  .main {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .side {
+    grid-column: 1;
+    grid-row: 2;
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .foot {
+    grid-column: 1;
+    grid-row: 3;
+  }
 }
 
 @media (max-width: 900px) {

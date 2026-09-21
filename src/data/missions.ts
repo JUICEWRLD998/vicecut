@@ -53,13 +53,46 @@ export type EditorTools = {
  * on an ESRB warning card. The screenshot set is already screened, already 4K,
  * already in this repo. Full reading in docs/SCENE-SOURCES.md.
  */
+/**
+ * One beat of the briefing clip: a slate label, and optionally a radio
+ * transmission that plays as the frame cuts in.
+ *
+ * Split from `frames` rather than inlined so a beat can be added to the story
+ * without renaming anything, and so the radio is authored per beat — the whole
+ * point of the audio pass is that the transmission lands WITH its picture, not
+ * over the clip as a whole.
+ */
+export type BriefingBeat = {
+  /** Slate label for this frame. Kept to two or three words — it is a slug, not
+   *  a sentence, and it sits over the picture. */
+  label: string;
+  /** Radio line for this beat. Omit for a silent beat: not every cut needs talk,
+   *  and four transmissions in five seconds is noise rather than a story. */
+  radio?: { who: string; line: string };
+};
+
 export type Briefing = {
   /**
    * Stills in cut order. THE LAST ONE IS THE FREEZE FRAME — it is what the
    * player marks, and what the target region below is measured against. Stated
    * once rather than as a separate field, so the two cannot drift apart.
+   *
+   * FOUR beats, not three. Three was enough to establish a world and a moment but
+   * not enough to tell a story: with only world -> meet -> consequence the middle
+   * had to carry the whole setup, and the player never saw the plan actually
+   * being executed. The fourth beat is the approach, which is what makes the
+   * freeze read as something going wrong rather than as a car that happens to be
+   * on fire.
    */
   frames: readonly string[];
+  /**
+   * Per-frame slate labels and radio, index-aligned to `frames`.
+   *
+   * Index-aligned rather than a separate list keyed by id, because the two are
+   * meaningless apart. A shorter `beats` array is tolerated — a frame with no
+   * beat simply shows no caption — so adding a fifth still cannot crash a clip.
+   */
+  beats: readonly BriefingBeat[];
   /** How long each still holds before the cut, in ms. */
   holdMs: number;
   /**
@@ -186,8 +219,22 @@ export const MISSIONS: readonly Mission[] = [
     briefing: {
       frames: [
         "/scenes/night-shift.jpg",
+        "/briefs/Night_Shift_approach.jpg",
         "/briefs/Jason_Duval_06.jpg",
         "/briefs/Jason_and_Lucia_08.jpg",
+      ],
+      /**
+       * The story in four beats: the marina, moving in, the exchange, and the
+       * moment it turns. The radio carries the plan being executed — Lucia
+       * clears them, then Jason goes — and the last transmission is the one that
+       * lands on the freeze, so the player hears the thing go wrong at the same
+       * instant they see it.
+       */
+      beats: [
+        { label: "The marina", radio: { who: "LUCIA", line: "You got one shot." } },
+        { label: "The approach", radio: { who: "JASON", line: "Nobody moves till I'm out." } },
+        { label: "The meet", radio: { who: "LUCIA", line: "Clean. Nobody's made us." } },
+        { label: "The moment", radio: { who: "JASON", line: "Go. Go now." } },
       ],
       holdMs: 1500,
       target: { x: 0.351, y: 0.542, w: 0.36, h: 0.36 },
@@ -246,8 +293,21 @@ export const MISSIONS: readonly Mission[] = [
     briefing: {
       frames: [
         "/scenes/southbound.jpg",
+        "/briefs/Southbound_handoff.jpg",
         "/briefs/Southbound_pursuit.jpg",
         "/briefs/Jason_Duval_02.jpg",
+      ],
+      /**
+       * The run south in four beats: the Keys, the handoff, the pursuit, the
+       * escape. Lucia calls the movement and then the trouble; Jason answers
+       * both. The pursuit beat is what makes the last frame an escape rather
+       * than just a man driving.
+       */
+      beats: [
+        { label: "The Keys", radio: { who: "LUCIA", line: "He's moving south." } },
+        { label: "The handoff", radio: { who: "JASON", line: "Package is in the car." } },
+        { label: "The pursuit", radio: { who: "LUCIA", line: "You've got company." } },
+        { label: "The escape", radio: { who: "JASON", line: "I'm not stopping for anybody." } },
       ],
       holdMs: 1500,
       target: { x: 0.22, y: 0.22, w: 0.36, h: 0.36 },
@@ -305,7 +365,27 @@ export const MISSIONS: readonly Mission[] = [
       frames: [
         "/scenes/no-signal.jpg",
         "/briefs/No_Signal_watch.jpg",
-        "/briefs/Port_Gellhorn_01.jpg",
+        "/briefs/No_Signal_watchers.jpg",
+        "/scenes/no-signal.jpg",
+      ],
+      /**
+       * A surveillance loop, in four beats: the port, the eye on it, the room
+       * doing the watching, and back to the port as the target.
+       *
+       * The first and last frames are deliberately THE SAME IMAGE. That is a
+       * bookend, not a mistake: the clip leaves the motel, shows who is watching
+       * and from where, and returns to the motel — so the freeze lands on a place
+       * the player has already been told is being watched. It also means the
+       * freeze is the mission's own scene, so nothing had to be re-derived.
+       *
+       * Radio is one voice, one side of a call, because the player is the only
+       * other person on it.
+       */
+      beats: [
+        { label: "The port", radio: { who: "JASON", line: "I'm at the motel. Lights are on." } },
+        { label: "Eyes on it", radio: { who: "JASON", line: "Somebody's up on the ridge." } },
+        { label: "The room", radio: { who: "JASON", line: "Camera's live. Do something." } },
+        { label: "The target" },
       ],
       holdMs: 1500,
       target: { x: 0.164, y: 0.209, w: 0.36, h: 0.36 },
