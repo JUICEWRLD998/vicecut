@@ -226,6 +226,33 @@ export const MISSIONS: readonly Mission[] = [
       process: "Framed print",
       verdict: "Framed",
     },
+    /**
+     * Three beats, ending on the freeze the player frames.
+     *
+     * 1. the road — the Keys coast, where the run starts
+     * 2. the pursuit — the chase closing in, which is what makes it an escape
+     * 3. the escape — Jason at the wheel, pulling away   <- freeze
+     *
+     * The target region here was CHOSEN AND CHECKED BY EYE, not derived, and that
+     * is a deliberate departure worth recording. The structure-weighted measure
+     * that works for missions 01 and 03 scores high-frequency detail, and on this
+     * frame the palm fronds beside Jason out-score his face even with a centre
+     * bias applied — the hot cell stayed at x 0.219, the palms, after the bias.
+     * Rather than tune a measure until it fits these three frames, the region was
+     * placed on the subject and verified by looking at it. A subtly wrong region
+     * is worse than a deliberate one: it silently mis-grades a judge's mark,
+     * which is the one thing this check must never do.
+     */
+    briefing: {
+      frames: [
+        "/scenes/southbound.jpg",
+        "/briefs/Southbound_pursuit.jpg",
+        "/briefs/Jason_Duval_02.jpg",
+      ],
+      holdMs: 1500,
+      target: { x: 0.22, y: 0.22, w: 0.36, h: 0.36 },
+      beat: "The driver pulls away.",
+    },
     /* Framing-led, per §11 — the brief calls this the scene that "should
        demonstrate cropping/framing more than drawing", so the annotation tools
        are off entirely. Four tools, all about where the edges are. */
@@ -259,6 +286,30 @@ export const MISSIONS: readonly Mission[] = [
       genre: "Cold surveillance",
       process: "Seized footage",
       verdict: "Redacted",
+    },
+    /**
+     * Three beats, ending on the freeze the player obscures.
+     *
+     * 1. the port — the industrial waterfront, the watch being kept
+     * 2. the threat — the people doing the watching, on the road into it
+     * 3. the target — the motel at night   <- freeze
+     *
+     * Region derived and visually verified: it lands on the Starlet Motel sign,
+     * which is the thing in this frame worth hiding. Fourth method tried on the
+     * set — luminance x saturation had scored flat sky as a subject on
+     * Port_Gellhorn_06, and the structure-weighted measure alone over-preferred
+     * foliage here. The two measures together, checked by eye each time, is what
+     * settled it.
+     */
+    briefing: {
+      frames: [
+        "/scenes/no-signal.jpg",
+        "/briefs/No_Signal_watch.jpg",
+        "/briefs/Port_Gellhorn_01.jpg",
+      ],
+      holdMs: 1500,
+      target: { x: 0.164, y: 0.209, w: 0.36, h: 0.36 },
+      beat: "Someone is watching.",
     },
     /* Obstruction-led: censor bars, blackout strokes, redaction, and a grade to
        sell the camera. `crop` stays because reframing the target out of shot is

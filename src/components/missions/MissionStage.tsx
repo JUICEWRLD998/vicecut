@@ -4,14 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MissionBrief } from "@/components/missions/MissionBrief";
 import { BriefingClip } from "@/components/missions/BriefingClip";
-import { DirectorCut } from "@/components/missions/DirectorCut";
+import { MissionCinematic } from "@/components/missions/MissionCinematic";
 import { DirectorEditor, type CapturedFrame } from "@/components/editor/DirectorEditor";
 import { GameShell } from "@/components/shell/Shell";
 import { getNextMission, editableFrame, type Mission } from "@/data/missions";
 
 /**
- * Mission flow: brief -> briefing clip -> director -> locked
- * (Phase 6: -> cinematic).
+ * Mission flow: brief -> briefing clip -> director -> cinematic.
  *
  * Held as one route with stages rather than separate pages, because §17 is
  * explicit that LOCK FRAME must not read as routing away. Routing between the
@@ -23,6 +22,11 @@ import { getNextMission, editableFrame, type Mission } from "@/data/missions";
  * to "mark the moment the plan goes wrong", and without seeing the plan they
  * have nothing to mark against — the editor becomes a decoration tool. The clip
  * shows the beat, freezes on it, and hands THAT FRAME to the editor.
+ *
+ * The `locked` stage is the cinematic (Phase 6). It was previously a static
+ * "Director's Cut" slate; the slate's content is unchanged in substance and now
+ * plays as the §18 beat sheet, which is what §18 asks for and what a still
+ * screen could not be.
  */
 
 type Stage = "brief" | "clip" | "direct" | "locked";
@@ -66,12 +70,12 @@ export function MissionStage({ mission }: { mission: Mission }) {
   }, []);
 
   /**
-   * LOCK FRAME (§17). Captures the frame and moves to the cut.
+   * LOCK FRAME (§17). Captures the frame and hands it to the cinematic.
    *
    * This used to `console.info` the frame and stop — Phase 5's checkpoint was
    * satisfied on paper ("edited image visible") while the player saw nothing at
    * all, which is why the editor read as a basic submission. The captured frame
-   * is now held in state and handed to the Director's Cut, which is what makes
+   * is now held in state and handed to the Phase 6 sequence, which is what makes
    * the eight tools have a visible consequence.
    */
   const lock = useCallback((frame: CapturedFrame) => {
@@ -99,7 +103,7 @@ export function MissionStage({ mission }: { mission: Mission }) {
   if (stage === "locked" && locked) {
     return (
       <GameShell intensity="light" vignette={false} grain={false}>
-        <DirectorCut
+        <MissionCinematic
           mission={mission}
           frame={locked}
           onRollAgain={rollAgain}

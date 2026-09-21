@@ -348,3 +348,83 @@ export function takeNumber(report: FrameReport | null): string {
     report.width;
   return String(seed % 1000).padStart(3, "0");
 }
+
+/** The Director Score block (§20). Three dimensions plus the cut. */
+export type DirectorScore = {
+  framing: number;
+  composition: number;
+  control: number;
+  /** The mean of the three, presented as FINAL CUT. */
+  final: number;
+};
+
+/**
+ * The Director Score (§20).
+ *
+ * §20 is explicit on two points, and both are load-bearing here: these must not
+ * pretend to be measured AI judgements, and they must be deterministic.
+ *
+ * They are deterministic — each is a pure function of the frame measurements, so
+ * the same edit always produces the same score, every rehearsal. And they are
+ * grounded rather than invented: every one moves when the player's edit moves,
+ * which is the difference between a score that reads as feedback and one that
+ * reads as a lottery. A player who marks the moment scores differently from one
+ * who grades the whole frame, and they can see why.
+ *
+ * They are still a game metric, not a judgement, and the UI labels them as such.
+ */
+export function directorScore(report: FrameReport): DirectorScore {
+  const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
+
+  // CONTROL — did the mark land where the brief pointed? Straight from the
+  // measured share of the mark inside the target region. This is the most
+  // honest of the three: it is a measurement with a name on it.
+  const control = clamp(report.onTargetShare);
+
+  // FRAMING — did the player make a decisive choice about the frame?
+  //
+  // A reframe (changed output dimensions) is the most decisive statement
+  // available about a frame, so it is scored on its own scale and does not need
+  // a target hit to score well — cropping to the subject IS the framing
+  // judgement, and mission 02's brief asks for exactly that.
+  //
+  // Without a reframe, framing leans on whether the edit was aimed rather than
+  // on where it landed, because `control` already measures placement and scoring
+  // the same measurement twice would just double its weight.
+  const reframed =
+    report.width !== report.originalWidth || report.height !== report.originalHeight;
+  const framing = clamp(
+    reframed
+      ? 62 + Math.min(36, report.coverage * 0.9)
+      : 58 + report.onTargetShare * 0.4,
+  );
+
+  // COMPOSITION — how much of the frame the edit actually engaged.
+  //
+  // A grade is global by nature and an annotation is local, so each is scored
+  // against its own expected reach. A single scale would rank a filter above a
+  // mark for no better reason than covering more pixels, which would tell the
+  // player the opposite of what the tools are for.
+  const composition = clamp(
+    report.spread >= GRADE_SPREAD
+      ? 66 + Math.min(32, report.spread * 0.32)
+      : 58 + Math.min(38, report.coverage * 9),
+  );
+
+  return { framing, composition, control, final: clamp((framing + composition + control) / 3) };
+}
+
+/**
+ * Director rep, the optional §20 line.
+ *
+ * Also deterministic, and derived from the same three dimensions so it can never
+ * contradict the scores shown beside it. Bands rather than a continuous function
+ * because rep reads as a game reward — "the operation landed" — and a smooth
+ * curve would just be the score printed again in different units.
+ */
+export function directorRep(score: DirectorScore): number {
+  if (score.final >= 85) return 120;
+  if (score.final >= 70) return 80;
+  if (score.final >= 55) return 45;
+  return 20;
+}

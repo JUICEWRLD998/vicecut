@@ -235,14 +235,27 @@ export function DirectorEditor({
     setDeveloping(true);
     saveButton.click();
 
-    // If the save never comes back — no changes to flush, a rejected promise, a
-    // hung editor — do not strand the player on a button that does nothing.
+    // Do not strand the player on a button that does nothing if the save never
+    // comes back. This is a guard against a HUNG save, not against a slow one,
+    // and the number matters more than it looks:
+    //
+    // Measured on a production build, LOCK FRAME with a filter applied takes
+    // ~4.9s from click to the frame being ready — the editor encodes a 3840x2160
+    // frame to a ~13MB data URL, and that is simply how long it takes. The
+    // original 4000ms guard was therefore SHORTER THAN THE SAVE IT WAS RACING, so
+    // on a slower machine, a larger edit, or a busier main thread it would fire
+    // first, fall back to `getImage()`, and silently drop the player's filter —
+    // reintroducing the exact Phase 5 bug this whole path exists to prevent.
+    //
+    // 15s is deliberately far above any observed save: the failure it guards
+    // against is a promise that never settles, and the cost of waiting that long
+    // is a clearly-labelled "Developing" button, not a frozen screen.
     fallbackTimer.current = window.setTimeout(() => {
       fallbackTimer.current = null;
       if (!pendingLock.current) return;
       pendingLock.current = false;
       liftCanvas();
-    }, 4000);
+    }, 15000);
   }, [developing, onLock]);
 
   /**
