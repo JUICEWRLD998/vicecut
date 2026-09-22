@@ -287,7 +287,18 @@ export const MISSIONS: readonly Mission[] = [
     code: "02",
     name: "Southbound",
     location: "Leonida Keys",
-    mood: "Sunset / Highway / Heat",
+    /*
+     * "Daylight", not "Sunset".
+     *
+     * The mood is a caption for the scene beside it, and the scene is now the
+     * Keys coastal highway under a bright sky. It previously read
+     * "Sunset / Highway / Heat" over an INLAND AMBROSIA FIELD FIRE — a picture
+     * with no highway, no Keys and no subject in it, captioned with three words
+     * none of which it showed. Both halves of that were wrong and they propped
+     * each other up: the mismatch was only visible by putting the two side by
+     * side, which is what the Phase 8 pass did.
+     */
+    mood: "Daylight / Highway / Heat",
     time: "19:18",
     scene: "/scenes/southbound.jpg",
     sceneFocus: "50% 58%",
@@ -501,6 +512,39 @@ export const SEQUENCE_SCENES = [
   "/seq/05-Port_Gellhorn_01.jpg",
   "/seq/06-Vice_City_08.jpg",
 ] as const;
+
+/**
+ * Scene files that are the SAME PHOTOGRAPH as a sequence still.
+ *
+ * These pairs are different files — the scene is the full 3840px master used by
+ * the tile and the brief, the sequence still is the 1920px derivative cut for the
+ * title transition — but they show the same picture, and that is the fact this
+ * map exists to record. It cannot be derived: the paths differ, the filenames
+ * differ, and only looking at the two images establishes it.
+ *
+ * Why it matters. Mission select plays a three-still entry sequence that ENDS on
+ * the mission's own scene, so the player arrives at the place they just saw. If
+ * one of the two earlier stills is also that scene, the same photograph lands
+ * twice inside a 900ms transition and the transition reads as a stutter rather
+ * than as travel. `entryFrames` in MissionSelect.tsx uses this map to exclude it.
+ *
+ * A path comparison would not catch it — that was the first attempt, and it
+ * reported a pass while the duplicate played. Both entries were verified by eye
+ * against the stills they name.
+ */
+const SCENE_IS_SEQ_STILL: Record<string, string> = {
+  // Mission 02's scene became the Keys highway on 2026-09-22; the sequence's
+  // third still is that same frame, cut smaller.
+  "/scenes/southbound.jpg": "/seq/03-Leonida_Keys_01.jpg",
+  // Mission 03's scene has always been the Port Gellhorn still the sequence
+  // leads with, so this duplicate predates the Phase 8 pass.
+  "/scenes/no-signal.jpg": "/seq/05-Port_Gellhorn_01.jpg",
+};
+
+/** The sequence still that shows the same photograph as `scene`, if any. */
+export function seqStillForScene(scene: string): string | undefined {
+  return SCENE_IS_SEQ_STILL[scene];
+}
 
 export function getMission(id: string): Mission | undefined {
   return MISSIONS.find((m) => m.id === id);

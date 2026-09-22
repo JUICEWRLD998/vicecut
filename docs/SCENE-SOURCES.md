@@ -11,9 +11,28 @@ Five master files, all under `public/scenes/`:
 |---|---|---|---|
 | `title-cover.jpg` | Title screen, design playground (§05), start of the spike | Official Cover Art, landscape | 3840×2160, 132KB |
 | `night-shift.jpg` | Mission 01 · The Night Shift | Vice City screenshot 08 | 3840×2160, 740KB |
-| `southbound.jpg` | Mission 02 · Southbound | Ambrosia screenshot 04 | 3840×2160, 1.1MB |
+| `southbound.jpg` | Mission 02 · Southbound | Leonida Keys screenshot 01 | 3840×2160, 810KB |
 | `no-signal.jpg` | Mission 03 · No Signal | Port Gellhorn screenshot 01 | 3840×2160, 812KB |
 | `Jason_and_Lucia_Robbery_landscape.jpg` | Title screen key art (`TITLE_ART`) | Official Cover Art, Jason & Lucia | 3840×2160, 1.6MB |
+
+`southbound.jpg` was **replaced on 2026-09-22**, from Ambrosia screenshot 04 to
+Leonida Keys screenshot 01. The Ambrosia frame is an inland field fire — power
+lines, burning scrub, smoke — with no highway, no Keys and no subject in the
+upper third, and the mission tile captioned it "LEONIDA KEYS / SUNSET / HIGHWAY /
+HEAT". Every one of those words was contradicted by the picture beside it. The
+mismatch was invisible screen by screen and obvious the moment the two were put
+side by side, which is what the Phase 8 audit did.
+
+Keys 01 is the coastal highway: the road runs across the frame with the bridge
+causeway behind it and the Vice City skyline on the horizon, which is what the
+mission actually says it is. Its `mood` was reworded to "Daylight / Highway /
+Heat" to match, and its `time` stays 19:18 as the in-world clock for the run
+rather than a claim about the light in the photograph.
+
+One consequence worth knowing: **this still is also a sequence frame**
+(`public/seq/03-Leonida_Keys_01.jpg`). So mission 02's opener in the mission-select
+entry sequence now has to avoid it, or the same picture plays twice inside a
+900ms transition — `entryFrames` in `MissionSelect.tsx` carries that guard.
 
 Two derived sets also ship, both cut from the files above and re-encoded smaller:
 

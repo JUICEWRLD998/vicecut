@@ -8,7 +8,7 @@ import { CornerBrackets } from "@/components/ui/CornerBracket";
 import { RuleLine } from "@/components/ui/RuleLine";
 import { GameShell } from "@/components/shell/Shell";
 import { SceneSequence } from "@/components/transition/SceneSequence";
-import { MISSIONS, SEQUENCE_SCENES, type Mission } from "@/data/missions";
+import { MISSIONS, SEQUENCE_SCENES, seqStillForScene, type Mission } from "@/data/missions";
 import { fadeIn, riseIn, staggerContainer } from "@/lib/motion";
 import styles from "./MissionSelect.module.css";
 
@@ -44,11 +44,38 @@ import styles from "./MissionSelect.module.css";
  */
 function entryFrames(missionIndex: number, scene: string): string[] {
   const total = SEQUENCE_SCENES.length;
-  return [
-    SEQUENCE_SCENES[(missionIndex * 2) % total],
-    SEQUENCE_SCENES[(missionIndex * 2 + 3) % total],
-    scene,
-  ];
+  const at = (n: number) => SEQUENCE_SCENES[((n % total) + total) % total];
+  const second = (missionIndex * 2 + 3) % total;
+  let first = (missionIndex * 2) % total;
+  const sceneStill = seqStillForScene(scene);
+
+  /**
+   * No still may play twice in one transition.
+   *
+   * The destination is always `scene`, so an opener is only valid if it is a
+   * DIFFERENT PHOTOGRAPH from it. The first version of this guard compared
+   * strings — `at(first) !== scene` — and reported a pass while the duplicate
+   * played: mission 02's scene and the sequence's third still are the same
+   * photograph held in two files (`/scenes/southbound.jpg` and
+   * `/seq/03-Leonida_Keys_01.jpg`), so the paths differed and the guard never
+   * fired. The equivalence is declared in `seqStillForScene` instead, because it
+   * is a fact about the pictures and not about their names.
+   *
+   * The middle still is excluded too — mission 03's scene has always been the
+   * still the sequence leads with, so before this its transition opened and
+   * closed on the same frame.
+   *
+   * Mission 01 is unaffected: its scene is not a sequence still.
+   */
+  const clash = (n: number) => {
+    const f = at(n);
+    return f === scene || f === sceneStill || n === second;
+  };
+  for (let guard = 0; guard < total && clash(first); guard++) {
+    first = (first + 1) % total;
+  }
+
+  return [at(first), at(second), scene];
 }
 
 const ENTRY_HOLD_MS = 300;
