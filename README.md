@@ -4,7 +4,6 @@
 
 VICE CUT is a cinematic mission-director built around the **Unlayer React Image Editor**. You pick an operation, watch a short briefing clip, then step into the real Unlayer editor and direct a frozen frame yourself. Press **LOCK FRAME** and the editor disappears — your edited image takes the screen and becomes the opening shot of a mission cinematic, which then measures what you actually did to the frame and grades the cut.
 
-A fan-made, non-commercial hackathon entry. Not affiliated with Rockstar Games or Take-Two Interactive.
 
 ```
 TITLE → SELECT OPERATION → BRIEF → BRIEFING CLIP → UNLAYER EDITOR
@@ -156,75 +155,7 @@ Out of the box the rail reads FILTER / CROP / DRAW / TEXT / SHAPES / STICKERS / 
 
 The re-skin uses only the library's supported surface — `translations` for copy, `tools[key].icon` for rail glyphs. Nothing reaches into its internals or depends on a class name, because the bundle ships on its own release cadence and anything inside it breaks on a version bump without warning.
 
-### Five things to know before touching the integration
 
-- **`options` identity is load-bearing.** Only `theme` / `locale` / `translations` are update-tier; every other key is **remount-tier**. An inline object literal recreates the editor on every render and silently discards the player's work. It's built once in a `useMemo` keyed on the toolset — the single most dangerous detail here.
-- **`onSave` ≠ `getImage()`.** On a frame with Grayscale applied, `onSave` returned a desaturated frame while `getImage()` returned the *un-graded* original — so capturing via `getImage()` silently dropped a filter. It's fallback-only now, and flagged as degraded all the way to the result screen.
-- **The README documents props the shipped types don't have** (`ariaLabel`, `tools.corners`, `tools.dock`). Trust the `.d.ts`.
-- **The editor renders inline** — two `<canvas>` elements, not an iframe.
-- **Two labels are also handles.** The lock path finds the editor's own save button by its label, and the legend cross-references the rail labels. Renaming one without the other once broke filter capture, so both live as exported constants with the reasoning attached.
-
----
-
-## Measuring the edit
-
-The editor hands back a flattened image and nothing else — no record of what was drawn, cropped, graded or framed. So rather than invent a score, `src/lib/frame.ts` measures it: the original scene and the locked frame are both drawn into a 320×180 offscreen canvas and compared pixel by pixel.
-
-| Signal | Meaning |
-|---|---|
-| `edited` | Asked of the editor's own `hasChanges()`, not inferred from pixels |
-| `coverage` | Share of the frame altered |
-| `spread` | Share touched at all — this is what separates a grade from a mark |
-| `markCentre` | Where the change actually landed |
-| `onTargetShare` | Share of the mark that landed inside the mission's target region |
-
-Two thresholds exist because one can't separate the two kinds of edit: a drawn stroke spreads 0–4% of the frame, while grayscale spreads 58% and sepia 91%. A filter is a **global change of moderate size**; a stroke is a **local change of large size**. That gives an edit verdict (`untouched` / `annotated` / `graded` / `reframed`) and a Director Score built purely from the measurements — deterministic, so the same edit always produces the same readout.
-
-The comparison plate boxes the mission's target region on the original side and says whether your mark landed in it, so a verdict always arrives with its answer key.
-
----
-
-## Design system
-
-A single-look, dark-first interface — no light theme, because the scene imagery is night and a light variant would fight it.
-
-| Token | Value | Role |
-|---|---|---|
-| `--c-base` | `#090a0c` | Asphalt page ground |
-| `--c-surface-1/2/3` | `#111316` / `#16181c` / `#1d2025` | Panel, control, hover |
-| `--c-paper` | `#ede8dd` | Text — 16.21:1 on base |
-| `--c-accent` | `#ff5a72` | Vice coral: the primary action and the current step, nothing else |
-| `--c-amber` / `--c-cyan` | `#ffb35c` / `#55d8e8` | Support colours, never used alongside coral |
-
-Coral is a fill, never a surface for off-white text — paper on coral measures 2.47:1 and fails. Labels on coral use `--c-base`.
-
-Type is **Archivo** (variable width axis) for display, **Instrument Sans** for UI, **Geist Mono** for machine metadata like `CAM 01` and `SCENE 01 / 03`.
-
-Motion is directional ease-out only, never springy: 180ms for UI feedback, 560ms for scene transitions. Every animation comes from one shared vocabulary, so timing stays coherent and no single transition attracts more attention than the scene.
-
----
-
-## Accessibility
-
-- **Keyboard is a first-class path** — Enter/Space/click starts, arrows move the selection, `1`–`3` jump, Escape leaves the editor.
-- **`reducedMotion="user"`** is applied globally. Under reduced motion the cinematic lands straight on the result: the comparison and scores are content, and only the build-up is dropped.
-- **Escape on a dirty canvas arms a confirmation** that expires on its own, rather than a native dialog that would break the frame.
-- **The comparison divider is pointer *and* keyboard operable**, bound to the whole stage rather than the 2px handle.
-- **The cinematic is narrated** to assistive tech as whole sentences, and every decorative layer is `pointer-events: none` + `aria-hidden`.
-
----
-
-## Credits and licensing
-
-**Scene imagery** is official GTA VI artwork sourced from Rockstar's media CDN — screenshots, cover art and key art. Full provenance, direct URLs and derivation commands are in [`docs/SCENE-SOURCES.md`](docs/SCENE-SOURCES.md).
-
-> That hub invites sharing, but an invitation is **not a licence grant**. This is a fan-made non-commercial entry, which is the context the assets were chosen in. **If this ever ships commercially, get the terms reviewed** or swap to stock sourcing. The assets are isolated under `public/scenes/`, `public/briefs/`, `public/seq/` and `public/ground/`, referenced from one data module plus two pages, so the swap is a small change.
-
-**Soundtrack** — "Neon Laser Horizon" by Kevin MacLeod (incompetech.com), licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), which **requires** attribution. For a web app the deployed page is the medium, so the credit ships on screen at the foot of the mission result. Swapping to a CC0 track removes that line automatically. Sound-effect cues are synthesised in Web Audio, not assets.
-
-**Third-party software** — Next.js and React (MIT), Unlayer React Image Editor, Motion (MIT), and the Archivo, Instrument Sans and Geist Mono typefaces (Open Font Licence).
-
----
 
 ## Repository map
 
@@ -244,10 +175,3 @@ docs/                  scene provenance and sourcing notes
 ```
 
 ---
-
-## Known limitations
-
-- **No demo mode.** There's no single-command rehearsed route. The experience is deterministic and needs no external service, and a failed save already falls back to the canvas with the degradation carried through honestly to the result screen — but the fallback frame per mission isn't pre-baked.
-- **The editor needs connectivity**, since its engine boots from a CDN. Everything else runs offline.
-- **No automated test suite or CI.** Verification is the CDP driver, the contrast checker and manual passes across every screen.
-- **Mission 02's clock is in-world**, reading `19:18` over artwork shot at midday. The mood line matches the art; the clock is the run's own time.
