@@ -1,0 +1,159 @@
+/* THE COMPARISON (§21) — a plate in the result document.
+   Bordered, corner-marked and captioned, so it reads as an exhibit in the
+   paperwork rather than as a strange split across the whole screen. */
+
+.panel {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  /* Fills its grid track. No viewport-height cap and no auto-centring: both were
+     needed while the plate spanned the whole document, and both are wrong now
+     that it has a track of its own. The width is the column's, the aspect ratio
+     does the rest. */
+  width: 100%;
+}
+
+.frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  overflow: hidden;
+  border: var(--rule) solid var(--c-line-strong);
+  background: var(--c-surface-1);
+  cursor: ew-resize;
+  touch-action: none;
+  /* The wipe is a wipe, not a transition. Nothing here animates on drag. */
+  isolation: isolate;
+}
+
+.cut,
+.original {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* The original is clipped by inline clip-path; this layer only stacks it above
+   the cut. `will-change` is deliberately absent — the clip changes on every
+   pointer move and the compositor handles that without a hint. */
+.originalLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+/* --- the moment ---------------------------------------------------------- */
+
+/* Amber, not the coral accent. Coral is already the divider and the button
+   fill; a third meaning on the same colour would make the box read as part of
+   the wipe. Amber on base measures 11.18:1, so the tag stays legible on the
+   photograph. */
+.moment {
+  position: absolute;
+  border: 2px dashed var(--c-amber);
+  /* A dark inner edge, so the box survives a bright patch of photograph. */
+  box-shadow: inset 0 0 0 1px rgba(9, 10, 12, 0.55);
+  pointer-events: none;
+}
+
+.moment[data-hit="true"] {
+  border-style: solid;
+  background: rgba(255, 179, 92, 0.1);
+}
+
+.momentTag {
+  position: absolute;
+  top: -1px;
+  left: -2px;
+  padding: 2px var(--s-2);
+  background: var(--c-amber);
+  color: var(--c-base);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: var(--track-meta);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* --- the divider --------------------------------------------------------- */
+
+.divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  z-index: 3;
+  pointer-events: none;
+  background: var(--c-accent);
+  box-shadow: 0 0 0 1px rgba(9, 10, 12, 0.4);
+}
+
+.frame[data-dragging="true"] .divider {
+  box-shadow: 0 0 0 1px rgba(9, 10, 12, 0.4), 0 0 18px rgba(255, 90, 114, 0.5);
+}
+
+.divider:focus-visible {
+  outline: 2px solid var(--c-paper);
+  outline-offset: 3px;
+}
+
+.grip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 30px;
+  height: 30px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid var(--c-accent);
+  background: rgba(9, 10, 12, 0.6);
+}
+
+/* --- side labels --------------------------------------------------------- */
+
+/* Sits in a dark band so the labels survive whatever is behind them. Without
+   it, "YOUR CUT" rendered over a bright fire is unreadable. */
+.tagLeft,
+.tagRight {
+  position: absolute;
+  top: 0;
+  z-index: 4;
+  padding: var(--s-2) var(--s-3);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: var(--track-meta);
+  text-transform: uppercase;
+  color: var(--c-paper);
+  background: linear-gradient(rgba(9, 10, 12, 0.78), rgba(9, 10, 12, 0));
+  pointer-events: none;
+}
+
+.tagLeft {
+  left: 0;
+  padding-right: var(--s-6);
+}
+
+.tagRight {
+  right: 0;
+  padding-left: var(--s-6);
+  text-align: right;
+  color: var(--c-accent);
+}
+
+/* --- caption ------------------------------------------------------------- */
+
+.caption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+}
+
+.hint {
+  color: var(--c-muted);
+}

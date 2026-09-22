@@ -1,0 +1,120 @@
+/* THE OUTCOME PANELS — measured facts, then the game's reading of them.
+
+   Two panels, one hairline each, no cards. The result document is a page of
+   information and the panels are sections of it; boxing each one would turn the
+   page into a dashboard, which §7 lists under "absolutely avoid" (generic rounded
+   cards, unnecessary borders around every element). */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+  padding-top: var(--s-5);
+  border-top: var(--rule) solid var(--c-line);
+}
+
+.panelHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+}
+
+/* The honesty line. §20 requires the scores not to claim to be measured
+   judgements, and the same applies the other way round to the measurements — so
+   each panel states which of the two it is, on screen, rather than only here. */
+.panelNote {
+  color: var(--c-muted);
+}
+
+/* --- the slate ----------------------------------------------------------- */
+
+/* The shot record. Three fields on a rule, mono label over display value — the
+   same grammar the rest of the product uses for machine data, which is what makes
+   it read as part of the paperwork rather than as another panel. */
+.slate {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.slateHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+}
+
+.slateFields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-5);
+  padding-top: var(--s-4);
+  border-top: var(--rule) solid var(--c-line);
+}
+
+.slateField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.slateLabel {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: var(--track-meta);
+  text-transform: uppercase;
+  color: var(--c-muted);
+}
+
+.slateValue {
+  font-family: var(--font-display);
+  font-variation-settings: "wdth" var(--wdth-tight), "wght" 700;
+  font-size: clamp(17px, 1.7vw, 23px);
+  line-height: 1.05;
+  letter-spacing: var(--track-display);
+  color: var(--c-paper);
+}
+
+/* --- measured figures ----------------------------------------------------- */
+
+.figures {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-5);
+}
+
+/* --- score gauges --------------------------------------------------------- */
+
+.meters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-5) var(--s-6);
+}
+
+/* FINAL CUT sits below the three dimensions, ruled off, at the full measure —
+   it is the figure the screen answers with, so it gets its own line rather than
+   a fourth cell in the row above. */
+.final {
+  padding-top: var(--s-4);
+  border-top: var(--rule) solid var(--c-line);
+}
+
+@media (max-width: 900px) {
+  .figures,
+  .meters,
+  .slateFields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .figures,
+  .meters,
+  .slateFields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

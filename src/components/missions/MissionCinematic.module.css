@@ -87,19 +87,23 @@
 }
 
 .stage[data-phase="result"] .scrim {
-  /* Held dark further right than the single-column layout needed. The debrief
-     now occupies a second column out to ~1080px, which on a 1440 viewport is
-     75% of the width — and the old scrim had already faded to ~0.3 by there, so
-     measured text contrast dropped. The scrim follows the CONTENT, not a fixed
-     fraction, which is the same rule the Cut learned: hold the dark across the
-     full width of the text, and only then release it. */
+  /* A UNIFORM wash, not a directional release.
+     This was a `linear-gradient(100deg, ...)` that held dark to 75% and then
+     fell to 0.12 by 100% — correct when the result was a two-column panel whose
+     right column ended around 1080px. Once the document became a single column
+     the gradient outlived its reason: on a 1496px viewport the right 416px of
+     the screen was a 12%-scrimmed, camera-pushed crop of the locked frame, and
+     the seam where the document's dark edge met that bright slab ran the full
+     height of the page. That seam is what reads as "the screen splitting into
+     two", and it is a background problem, not a comparison one.
+     A document is not a backdrop with a hole in it: the wash is now even across
+     the whole frame, so the picture is texture behind the paperwork rather than
+     a second half of the screen. */
   background: linear-gradient(
-    100deg,
-    rgba(9, 10, 12, 0.95) 0%,
-    rgba(9, 10, 12, 0.94) 58%,
-    rgba(9, 10, 12, 0.88) 75%,
-    rgba(9, 10, 12, 0.4) 88%,
-    rgba(9, 10, 12, 0.12) 100%
+    165deg,
+    rgba(9, 10, 12, 0.93) 0%,
+    rgba(9, 10, 12, 0.9) 55%,
+    rgba(9, 10, 12, 0.95) 100%
   );
 }
 
@@ -244,9 +248,9 @@
 /* --- the result (§20) --------------------------------------------------- */
 
 /* A scroll container rather than a fixed panel: the result carries the readout,
-   the score, the debrief and the actions, and on a short viewport that is taller
-   than the screen. Scrolling is the honest answer; compressing the type to fit
-   would be the dishonest one.
+   the score and the actions, and on a short viewport that is taller than the
+   screen. Scrolling is the honest answer; compressing the type to fit would be
+   the dishonest one.
 
    Two columns where there is room. This is not decoration — stacked, the content
    measured 1603px inside a 900px viewport and pushed the debrief questions to
@@ -261,14 +265,30 @@
   overflow-x: hidden;
   padding: var(--s-7) var(--s-8) var(--s-8);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 400px);
+  /* TWO columns on a wide screen: the report on the left, the evidence in front
+     of it on the right.
+
+     This went single-column for a while, and that was the wrong fix. The original
+     two-column grid had a 400px track reserved for the AI debrief, and when that
+     panel was removed the empty track stayed — a grid track does not collapse on
+     its own — so the numbers crammed into two thirds of the page and 400px sat
+     empty. Collapsing to ONE column removed the dead space but created a worse
+     problem: full-width content is tall, so the plate pushed the readout, the
+     score and the actions below the fold, and a judge saw a picture and no
+     outcome.
+
+     Side by side is what actually holds: the plate sits beside the masthead, so
+     the frame AND the verdict AND the figures are all in the first screenful, and
+     the page stops being 40% empty at the same time. The reference implementation
+     lands on the same shape for the same reason — report left, exhibit right. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, min(42vw, 620px));
   align-content: start;
-  gap: var(--s-5) var(--s-8);
-  max-width: 1080px;
+  gap: var(--s-6) var(--s-8);
+  max-width: 1440px;
 }
 
-/* Left column: the verdict, the readout, the score, then the actions. */
-.main {
+/* Column 1, rows 1-3: who, what shot, what happened. */
+.masthead {
   grid-column: 1;
   grid-row: 1;
   display: flex;
@@ -277,22 +297,49 @@
   min-width: 0;
 }
 
-/* Right column: the debrief. Spans both rows so a long debrief can sit beside
-   the actions rather than forcing the footer down. A hairline on its inner edge
-   separates the two columns; the debrief's own top rule is suppressed below,
-   because a rule running the width of a column reads as a heading rule rather
-   than as a divider between two things side by side. */
-.side {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  min-width: 0;
-  padding-left: var(--s-8);
-  border-left: var(--rule) solid var(--c-line);
-}
-
-.foot {
+/* The shot record — caption material for the frame, so it sits with the title. */
+.slateRow {
   grid-column: 1;
   grid-row: 2;
+  min-width: 0;
+}
+
+/* The verdict. Directly under the title, so the eye goes scene -> verdict ->
+   evidence without hunting. */
+.verdict {
+  grid-column: 1;
+  grid-row: 3;
+  min-width: 0;
+}
+
+/* Column 2, spanning all three rows: THE comparison (§21). It is the payoff, so
+   it sits level with the title and stays there while the report reads down beside
+   it. Sized by the track rather than by a viewport-height budget, which is what
+   the single-column version needed to stop it eating the screen. */
+.plate {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  min-width: 0;
+  align-self: start;
+}
+
+/* Column 1, row 4: the measured facts, then the Director Score. Stacked rather
+   than side by side — the column is about 700px and each panel carries three or
+   four figures with captions under them, so splitting it again would leave every
+   gauge too short to read. */
+.main {
+  grid-column: 1;
+  grid-row: 4;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-6);
+  min-width: 0;
+}
+
+/* The actions run the full width, under both columns. */
+.foot {
+  grid-column: 1 / -1;
+  grid-row: 5;
 }
 
 .resultHead {
@@ -318,131 +365,20 @@
   border-bottom: var(--rule) solid var(--c-line);
 }
 
-/* --- the measured readout ---------------------------------------------- */
+/* --- the outcome (§20) --------------------------------------------------
+   The figures and the gauges moved to MissionOutcome, and their styles with
+   them. What stays here is the one thing that belongs to this layout: the block
+   that stands in for the score panel when there is no score to show. It keeps
+   the same top rule as the panels either side of it, so a frame locked as shot
+   reads as a document with a stated omission rather than as a screen that failed
+   to render. */
 
-.measured {
+.scoreEmpty {
   display: flex;
   flex-direction: column;
-}
-
-/* The one loud moment on the screen: the verdict word, at display scale. It is
-   the answer to "what did my edit do", so it outranks the numbers beneath it,
-   which are the evidence. */
-.figureHeadline {
-  font-family: var(--font-display);
-  font-variation-settings: "wdth" var(--wdth-display), "wght" 800;
-  font-weight: 800;
-  font-size: clamp(34px, 3.8vw, 54px);
-  line-height: 0.94;
-  letter-spacing: var(--track-display);
-  text-transform: uppercase;
-  color: var(--c-paper);
-  margin: 0 0 var(--s-4);
-}
-
-.check {
-  display: flex;
-  align-items: baseline;
-  gap: var(--s-4);
-  flex-wrap: wrap;
-  margin-bottom: var(--s-5);
-  padding: var(--s-3) 0;
-  border-top: var(--rule) solid var(--c-line);
-  border-bottom: var(--rule) solid var(--c-line);
-}
-
-.check[data-pass="true"] {
-  border-color: var(--c-accent-line);
-}
-
-.check[data-pass="true"] .checkLabel {
-  color: var(--c-accent);
-}
-
-.check[data-pass="false"] .checkLabel {
-  color: var(--c-muted-hi);
-}
-
-.checkNote {
-  color: var(--c-muted);
-}
-
-.readout {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--s-5);
-  margin: 0;
-}
-
-.cell {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-2);
-}
-
-.figure {
-  margin: 0;
-  font-family: var(--font-display);
-  font-variation-settings: "wdth" var(--wdth-display), "wght" 700;
-  font-weight: 700;
-  font-size: clamp(28px, 3vw, 44px);
-  line-height: 1;
-  letter-spacing: var(--track-display);
-  color: var(--c-paper);
-}
-
-.cellNote {
-  color: var(--c-muted);
-}
-
-.readoutPending {
-  height: clamp(170px, 18vw, 210px);
-}
-
-/* --- director score (§20) ---------------------------------------------- */
-
-.score {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-4);
+  gap: var(--s-3);
   padding-top: var(--s-5);
   border-top: var(--rule) solid var(--c-line);
-}
-
-.scoreLabel {
-  color: var(--c-accent);
-}
-
-.scoreGrid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--s-4);
-  margin: 0;
-}
-
-.scoreCell {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-2);
-}
-
-.scoreFigure {
-  margin: 0;
-  font-family: var(--font-display);
-  font-variation-settings: "wdth" var(--wdth-display), "wght" 700;
-  font-weight: 700;
-  font-size: clamp(22px, 2.2vw, 30px);
-  line-height: 1;
-  color: var(--c-muted-hi);
-}
-
-.scoreFinal {
-  padding-left: var(--s-4);
-  border-left: var(--rule) solid var(--c-accent-line);
-}
-
-.scoreFinalFigure {
-  color: var(--c-paper);
 }
 
 .scoreNote {
@@ -451,10 +387,20 @@
 
 /* --- actions ----------------------------------------------------------- */
 
+/* The actions and the music credit share a footer row: buttons on the left, the
+   CC BY line pushed to the far right where it reads as a footnote. Wraps rather
+   than shrinking, because a credit that has been squeezed to fit is a credit
+   nobody can read — and the whole point of putting it on screen is that it can
+   be read. */
 .foot {
   margin-top: var(--s-2);
   padding-top: var(--s-5);
   border-top: var(--rule) solid var(--c-line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4) var(--s-6);
+  flex-wrap: wrap;
 }
 
 .actions {
@@ -478,30 +424,45 @@
 }
 
 @media (max-width: 1180px) {
-  /* Single column below this width. The debrief returns to the bottom of the
-     stack, which is where it has to be when there is no second column — a
-     narrower viewport genuinely cannot show both at once, and scrolling to it is
-     then the only honest option. */
+  /* One column below this width, and the plate moves UNDER the verdict it
+     explains rather than beside the title. Both placements are explicit because
+     the desktop grid pins every child to a named row; without restating them the
+     children would keep their desktop coordinates and overlap in a single track.
+     Reading order is unchanged — masthead, slate, verdict, evidence, figures —
+     which is the order they already sit in in the DOM. */
   .result {
     grid-template-columns: minmax(0, 1fr);
     max-width: 720px;
   }
 
-  .main {
+  .masthead {
     grid-column: 1;
     grid-row: 1;
   }
 
-  .side {
+  .slateRow {
     grid-column: 1;
     grid-row: 2;
-    padding-left: 0;
-    border-left: 0;
+  }
+
+  .verdict {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .plate {
+    grid-column: 1;
+    grid-row: 4;
+  }
+
+  .main {
+    grid-column: 1;
+    grid-row: 5;
   }
 
   .foot {
     grid-column: 1;
-    grid-row: 3;
+    grid-row: 6;
   }
 }
 
@@ -516,13 +477,5 @@
   .result {
     padding: var(--s-6) var(--s-5) var(--s-7);
     max-width: none;
-  }
-
-  .scoreGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .readout {
-    gap: var(--s-4);
   }
 }

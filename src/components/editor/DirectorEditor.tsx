@@ -14,6 +14,8 @@ import type { Mission } from "@/data/missions";
 import { audio } from "@/lib/audio";
 import { T_SCENE } from "@/lib/motion";
 import { motion } from "motion/react";
+import { buildEditorOptions, SAVE_LABEL } from "./editor-skin";
+import { toolsFor } from "./film-tools";
 import styles from "./DirectorEditor.module.css";
 
 /**
@@ -103,19 +105,19 @@ export function DirectorEditor({
    * Depends on `mission.tools` alone (a stable reference from the missions
    * array), NOT on the whole mission object — a new object identity here would
    * remount the editor and discard the user's edit.
+   *
+   * The skin — rail labels, rail glyphs, every string the editor renders — comes
+   * from `editor-skin.ts`. It is pulled in here rather than at the call site so
+   * that the toolset and the words describing it are built from the same map and
+   * cannot disagree about which tools this mission has.
    */
   const options = useMemo<ImageEditorOptions>(
-    () => ({
-      theme: "dark",
-      features: {
-        imageEditor: {
-          enabled: true,
-          tools: mission.tools,
-        },
-      },
-    }),
+    () => buildEditorOptions(mission.tools),
     [mission.tools],
   );
+
+  /** The legend: exactly the tools in this mission's rail, in the rail's order. */
+  const filmTools = useMemo(() => toolsFor(mission.tools), [mission.tools]);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   /** Latest onLock, so the save callback never fires a stale closure. */
@@ -207,7 +209,7 @@ export function DirectorEditor({
 
     const saveButton = canvasRef.current
       ? [...canvasRef.current.querySelectorAll("button")].find(
-          (b) => b.textContent?.trim() === "Save",
+          (b) => b.textContent?.trim() === SAVE_LABEL,
         )
       : undefined;
 
@@ -354,30 +356,78 @@ export function DirectorEditor({
         </div>
       )}
 
-      <div className={styles.canvas} ref={canvasRef}>
-        <CornerBracket corner="tl" size="14px" />
-        <CornerBracket corner="br" size="14px" />
-        <ImageEditor
-          ref={editorRef}
-          image={image}
-          options={options}
-          minHeight="100%"
-          onLoad={handleLoad}
-          onSave={handleSave}
-          /* The editor's own Cancel button routes to the same place as Esc. It
-             was unhandled, so pressing it discarded the edit and left the screen
-             exactly as it was — the editor sat there with a cleared canvas and
-             no way to tell that anything had happened. */
-          onCancel={onExit}
-          onLoadError={() => setLoadError(true)}
-          onError={(e) => setError(e.message)}
-        />
+      <div className={styles.body}>
+        {/* THE TOOL LEGEND.
+            Sits beside the frame rather than over it, because it is read BEFORE
+            a tool is chosen: it names what each of the buttons in the rail does
+            to the shot, which is the one thing the rail itself has no room for
+            (five characters, see editor-skin.ts). It lists exactly the tools
+            this mission enabled, in the rail's own order, so reading down one
+            describes reading down the other. */}
+        <aside className={styles.legend} aria-label="Tools for this scene">
+          <Metadata className={styles.legendHead} tone="accent">
+            Your tools
+          </Metadata>
+          <ul className={styles.legendList}>
+            {filmTools.map((t) => (
+              <li key={t.key} className={styles.legendItem}>
+                <span className={styles.legendVerb}>{t.verb}</span>
+                {/* The rail label is only shown when it DIFFERS from the verb.
+                    Four of the eight tools carry the same word in both places —
+                    MARK, SLATE, PROP, MATTE — and printing it twice reads as a
+                    rendering fault rather than as a cross-reference. Where they
+                    differ the mapping is the useful part: the player is looking
+                    for INSERT in the rail and the button says SHAPE. */}
+                {t.rail !== t.verb ? (
+                  <span className={styles.legendRail}>{`Rail: ${t.rail}`}</span>
+                ) : null}
+                <span className={styles.legendEffect}>{t.effect}</span>
+              </li>
+            ))}
+          </ul>
+        </aside>
+
+        <div className={styles.canvas} ref={canvasRef}>
+          <CornerBracket corner="tl" size="14px" />
+          <CornerBracket corner="br" size="14px" />
+          <ImageEditor
+            ref={editorRef}
+            image={image}
+            options={options}
+            minHeight="100%"
+            onLoad={handleLoad}
+            onSave={handleSave}
+            /* The editor's own Cancel button routes to the same place as Esc. It
+               was unhandled, so pressing it discarded the edit and left the screen
+               exactly as it was — the editor sat there with a cleared canvas and
+               no way to tell that anything had happened. */
+            onCancel={onExit}
+            onLoadError={() => setLoadError(true)}
+            onError={(e) => setError(e.message)}
+          />
+        </div>
       </div>
 
       <footer className={styles.foot}>
         <Metadata className={styles.footHint}>
           {escArmed ? "Press esc again to discard this edit" : mission.instruction}
         </Metadata>
+        {/* WHAT the player is marking, in the fiction's words, while they are
+            choosing where to mark. The region itself is a hidden rect in the
+            mission data and the result grades against it, so withholding it here
+            meant a player was scored on a target they had never been shown — and
+            a miss read as a scoring bug rather than as a miss. It sits beside
+            the instruction rather than replacing it: the instruction is the job,
+            this is the answer key.
+
+            The label is the mission's own (`targetLabel`), because "the moment"
+            is mission 01's word. Hardcoding it here told Southbound, whose brief
+            says "frame the escape", that it was grading a moment. */}
+        {mission.briefing ? (
+          <Metadata className={styles.footMoment}>
+            {`${mission.briefing.targetLabel}: ${mission.briefing.momentHint}`}
+          </Metadata>
+        ) : null}
         {saveFailed ? (
           <Metadata tone="accent">
             Nothing to lock — the canvas could not be read

@@ -1,0 +1,43 @@
+/* THE STAMP. A decision, not a heading.
+
+   The visual grammar of a rubber stamp, built from things that survive being
+   rendered at any size: a rotated block, an outer rule, an inner rule, and one
+   accent colour. No texture image, no shadow, no faux-ink gradient — a scan of a
+   stamp reads as a photograph of a stamp, which is a different and worse object
+   than a stamp in an interface. */
+
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s-3) var(--s-6);
+
+  font-family: var(--font-display);
+  font-variation-settings: "wdth" var(--wdth-display), "wght" 800;
+  font-size: clamp(30px, 3.6vw, 52px);
+  line-height: 0.92;
+  letter-spacing: var(--track-display);
+  text-transform: uppercase;
+
+  /* Double rule: the outer edge plus an inset hairline, which is what a stamped
+     impression actually looks like where the ink takes at the border and thins
+     inside it. */
+  border: 3px solid currentColor;
+  box-shadow: inset 0 0 0 1px currentColor;
+
+  /* The impression sits ON the page rather than in it — the inset rule above is
+     the only "ink" detail, so no shadow is needed and none is added. */
+  background: transparent;
+}
+
+.stamp[data-tone="accent"] {
+  color: var(--c-accent);
+}
+
+.stamp[data-tone="amber"] {
+  color: var(--c-amber);
+}
+
+.stamp[data-tone="muted"] {
+  color: var(--c-muted-hi);
+}

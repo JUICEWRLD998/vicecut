@@ -372,9 +372,26 @@ export type DirectorScore = {
  * who grades the whole frame, and they can see why.
  *
  * They are still a game metric, not a judgement, and the UI labels them as such.
+ *
+ * Returns `null` when nothing was directed. This is the honest answer and it was
+ * missing: an untouched frame ran the same arithmetic as an edited one and came
+ * out FRAMING 58 / COMPOSITION 58 / CONTROL 0, because 58 is the formula's base
+ * term and every edit-free term contributes nothing. A judge who locked the
+ * frame without touching it saw three confident-looking numbers that described
+ * no decision anyone had made, which is precisely the "invented score" §20
+ * forbids — the formula was real, but the frame it was applied to had nothing in
+ * it to measure. The result screen now says so instead of printing noise.
  */
-export function directorScore(report: FrameReport): DirectorScore {
+export function directorScore(report: FrameReport): DirectorScore | null {
   const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
+
+  // Nothing was directed — no edit reported by the editor, and no pixel moved
+  // above the noise floor either. Either test alone is insufficient: see
+  // FrameReport.edited for why the pixels miss a thin stroke, and see
+  // TOUCH_FLOOR for why `edited` alone would score a stray JPEG-shifted pixel.
+  const reframed =
+    report.width !== report.originalWidth || report.height !== report.originalHeight;
+  if (!report.edited && !reframed && report.coverage < TOUCH_FLOOR) return null;
 
   // CONTROL — did the mark land where the brief pointed? Straight from the
   // measured share of the mark inside the target region. This is the most
@@ -391,8 +408,6 @@ export function directorScore(report: FrameReport): DirectorScore {
   // Without a reframe, framing leans on whether the edit was aimed rather than
   // on where it landed, because `control` already measures placement and scoring
   // the same measurement twice would just double its weight.
-  const reframed =
-    report.width !== report.originalWidth || report.height !== report.originalHeight;
   const framing = clamp(
     reframed
       ? 62 + Math.min(36, report.coverage * 0.9)
@@ -427,4 +442,43 @@ export function directorRep(score: DirectorScore): number {
   if (score.final >= 70) return 80;
   if (score.final >= 55) return 45;
   return 20;
+}
+
+/**
+ * THE THRESHOLDS THE SCORE TURNS ON, as percentages.
+ *
+ * Exported so the result screen can RULE them onto the meters rather than
+ * describing them in prose. The numbers here are not new: they are the same
+ * bands `directorRep` above switches on, stated once so the bar and the rep line
+ * cannot disagree about where the line is.
+ *
+ * This is the fix for the readout that prompted it. The result used to print
+ * `FRAMING 58 / COMPOSITION 58 / CONTROL 0 / FINAL CUT 39` as four bare figures,
+ * which a reader cannot evaluate: 39 is meaningless without knowing that 55 is
+ * where the operation starts landing, and 0 on CONTROL reads identically whether
+ * it is the floor or a total failure. A gauge with its line drawn answers both
+ * without a sentence of explanation.
+ */
+export const REP_BANDS = [55, 70, 85] as const;
+
+/**
+ * Where CONTROL starts counting as aimed.
+ *
+ * Half the player's mark inside the moment. Deliberately generous and stated
+ * once: the target region is a 0.36-of-frame box derived from the image, so
+ * demanding a tight hit on it would grade luck rather than direction.
+ */
+export const CONTROL_MARK = 50;
+
+/**
+ * How a figure landed against a band, in the words the rep line uses.
+ *
+ * Returns the name of the reachable band the value did NOT clear, which is the
+ * actionable half: "45 short of the next band" is a reason to try again, where
+ * "FINAL CUT 39" is just a number that disagrees with you.
+ */
+export function bandCaption(value: number, bands: readonly number[]): string {
+  const next = bands.find((b) => value < b);
+  if (next === undefined) return "Top band reached";
+  return `${next - value} below the ${next} band`;
 }

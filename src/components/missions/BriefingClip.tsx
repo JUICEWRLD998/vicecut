@@ -45,12 +45,28 @@ export function BriefingClip({
   briefing,
   missionName,
   missionCode,
+  instruction,
+  targetLabel,
   onMark,
   onSkip,
 }: {
   briefing: Briefing;
   missionName: string;
   missionCode: string;
+  /**
+   * The mission's own instruction, verbatim ("Mark the moment the plan goes
+   * wrong", "Frame the escape", "Obscure the target").
+   *
+   * Passed in rather than written here, and that is a Phase 7 correctness fix
+   * rather than tidiness. The freeze panel used to hardcode "Mark the frame
+   * where it goes wrong", which is mission 01's wording — so Southbound told the
+   * player to mark a moment its brief never mentioned, and No Signal asked them
+   * to mark when they had been told to obscure. Two of three scenes were
+   * answering the first mission's instruction.
+   */
+  instruction: string;
+  /** What this mission calls its target region. See `targetLabel` in missions.ts. */
+  targetLabel: string;
   /** The player is ready to mark the frozen frame — open the editor. */
   onMark: () => void;
   /** Skip straight to the editor. Escape hatch for a replayed demo. */
@@ -80,6 +96,12 @@ export function BriefingClip({
    * us here is the click on DIRECT SCENE, so unlocking on mount is sufficient in
    * practice; the engine is idempotent, so calling it again is free.
    *
+   * The theme is ALREADY playing by this point — the title screen armed it on
+   * mount and it started on the player's first click — so this does not start
+   * music, it only makes sure the engine is unlocked and the mix is open enough
+   * for a briefing. Starting a second track here is the bug this signature
+   * deliberately cannot express.
+   *
    * Everything below is fire-and-forget. If the browser has no Web Audio, or
    * blocks it, or the player has muted, `sound` is simply silent and no part of
    * the clip depends on it — §34 requires the app to stay fully functional with
@@ -89,13 +111,7 @@ export function BriefingClip({
   useEffect(() => {
     if (!sound) return;
     sound.unlock();
-    // A beat late rather than immediate, so the bed does not begin underneath the
-    // screen transition into the clip.
-    const start = window.setTimeout(() => sound.startBed(), 150);
-    return () => {
-      window.clearTimeout(start);
-      sound.stopBed();
-    };
+    sound.setTension(0.35);
   }, [sound]);
 
   /**
@@ -310,8 +326,17 @@ export function BriefingClip({
             <motion.div variants={riseIn} className={styles.objective}>
               <Metadata className={styles.objectiveLabel}>Your task</Metadata>
               <Prose size="lead" tone="paper">
-                Mark the frame where it goes wrong.
+                {instruction}
               </Prose>
+              {/* The answer key, given BEFORE the editor rather than graded
+                  against afterwards. The target region is a hidden rect in the
+                  mission data and the result measures the mark against it, so a
+                  player who was never told where it is could only fail it by
+                  accident. This is the same words the editor footer repeats, said
+                  once here so the instruction is complete the moment it is given. */}
+              <Metadata className={styles.moment}>
+                {`${targetLabel}: ${briefing.momentHint}`}
+              </Metadata>
             </motion.div>
 
             {promptReady ? (
@@ -356,7 +381,7 @@ export function BriefingClip({
           it, the transmission is only in the DOM, never announced. */}
       <p className={styles.srOnly} role="status" aria-live="polite">
         {frozen
-          ? `Frame held. ${briefing.beat} Mark the frame where it goes wrong.`
+          ? `Frame held. ${briefing.beat} ${instruction}`
           : `Briefing clip, frame ${Math.min(index + 1, total)} of ${total}${
               activeBeat?.label ? `: ${activeBeat.label}` : ""
             }.${activeBeat?.radio ? ` Radio. ${activeBeat.radio.who}: ${activeBeat.radio.line}` : ""}`}

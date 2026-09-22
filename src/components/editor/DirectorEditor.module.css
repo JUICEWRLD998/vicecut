@@ -24,17 +24,88 @@
   gap: var(--s-4);
 }
 
-/* The editor is the whole screen; it must not be letterboxed by padding.
-   Must be a flex column, not a plain block. The editor's own wrapper carries
-   inline `flex: 1 1 0%; display: flex; min-height: 100%`, i.e. it expects a flex
-   parent to size it. Against a block parent that `flex` is inert and the wrapper
-   collapsed to its content, leaving the editor in a 365px band at the top of an
-   854px pane with the rest black — visible in the editor screenshot, and the
-   reason a `> :last-child { height: 100% }` rule was here. That rule never took
-   effect and has been removed rather than left in place as a decoy. */
+/* The middle band: legend beside frame. A flex ROW, and `min-height: 0` is
+   load-bearing — without it this row would grow to its content's natural height
+   and push the footer off the bottom, because the flex item's default
+   `min-height: auto` refuses to shrink below what its children want. */
+.body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+}
+
+/* THE TOOL LEGEND. Fixed measure, own scroll: eight entries at this type size
+   are taller than a short viewport, and the frame beside it must not be squeezed
+   to make room. */
+.legend {
+  width: 224px;
+  flex: none;
+  overflow-y: auto;
+  padding: var(--s-5) var(--s-5) var(--s-5) var(--s-5);
+  border-right: var(--rule) solid var(--c-line);
+}
+
+.legendHead {
+  display: block;
+  margin-bottom: var(--s-4);
+}
+
+.legendList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.legendItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: var(--s-3);
+  border-left: 2px solid var(--c-line);
+}
+
+/* The rail label, set as the key it is: this is the string that appears on the
+   button the player is about to press, so it is the anchor of the entry. */
+.legendRail {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: var(--track-meta);
+  text-transform: uppercase;
+  color: var(--c-muted);
+}
+
+.legendVerb {
+  font-family: var(--font-display);
+  font-variation-settings: "wdth" var(--wdth-tight), "wght" 700;
+  font-size: 15px;
+  line-height: 1.1;
+  letter-spacing: var(--track-display);
+  text-transform: uppercase;
+  color: var(--c-paper);
+}
+
+.legendEffect {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--c-muted-hi);
+}
+
+/* The editor is the whole rest of the screen; it must not be letterboxed by
+   padding. Must be a flex column, not a plain block. The editor's own wrapper
+   carries inline `flex: 1 1 0%; display: flex; min-height: 100%`, i.e. it expects
+   a flex parent to size it. Against a block parent that `flex` is inert and the
+   wrapper collapsed to its content, leaving the editor in a 365px band at the
+   top of an 854px pane with the rest black — visible in the editor screenshot,
+   and the reason a `> :last-child { height: 100% }` rule was here. That rule
+   never took effect and has been removed rather than left in place as a decoy. */
 .canvas {
   position: relative;
   flex: 1;
+  min-width: 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -58,4 +129,13 @@
 
 .footHint {
   flex: 1;
+}
+
+/* The answer key (§21). Amber, matching the moment box drawn on the result
+   plate, so the two read as the same piece of information rather than as two
+   unrelated labels — and distinct from the coral accent, which already means
+   "action" on this screen (LOCK FRAME). */
+.footMoment {
+  color: var(--c-amber);
+  max-width: 44ch;
 }

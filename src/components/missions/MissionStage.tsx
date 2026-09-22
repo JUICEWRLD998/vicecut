@@ -121,6 +121,8 @@ export function MissionStage({ mission }: { mission: Mission }) {
           briefing={mission.briefing}
           missionName={mission.name}
           missionCode={mission.code}
+          instruction={mission.instruction}
+          targetLabel={mission.briefing.targetLabel}
           onMark={openEditor}
           onSkip={openEditor}
         />

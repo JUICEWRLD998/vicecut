@@ -196,6 +196,16 @@
   color: var(--c-accent);
 }
 
+/* The answer key (§21). Amber, matching the moment box drawn on the result
+   plate, so the two read as one piece of information rather than as two
+   unrelated labels — and distinct from the coral accent, which means "task"
+   here. */
+.moment {
+  display: block;
+  margin-top: var(--s-3);
+  color: var(--c-amber);
+}
+
 .prompt {
   display: flex;
   align-items: center;

@@ -75,20 +75,39 @@
   );
 }
 
-/* The audio toggle (§34). Bottom-right, above the shell's own layers, below the
-   editor's. Fixed, because it belongs to the session rather than to a screen —
-   it must stay reachable at the freeze and on the result, and both of those
-   scroll. */
+/* The audio toggle (§34). Fixed, because it belongs to the session rather than
+   to a screen — it must stay reachable at the freeze and on the result, and both
+   of those scroll.
+
+   IT SITS ABOVE THE ACTION BAR, NOT IN IT. Measured on the editor at 1600x1000,
+   `bottom: var(--s-6)` put the toggle at y 839..874 while the footer's LOCK FRAME
+   button occupied y 843..889 — a 117x31px overlap, and `elementFromPoint` at the
+   centre of that overlap returned the toggle, so the toggle was what a click on
+   the bottom-right of the button actually hit. It also painted over the button's
+   own label (the editor's z-index is 1, well under this control's
+   `--z-hud + 2`), so the screen rendered "LOCK FRAME" and "AUDIO ON" on top of
+   each other. The briefing clip's own action button lands in the same place, so
+   the same collision happened there.
+
+   The cause is two controls claiming one lane: a session-level control pinned
+   bottom-right will always fight a screen-level bottom-right action. So the
+   toggle moves out of that lane rather than the surfaces being raised over it —
+   raising them would only hide a control the player is meant to be able to reach
+   (§34), which is worse than the collision it fixes.
+
+   The bar's top edge measures 78px from the viewport bottom (48px button + two
+   16px paddings, ending 16px up), so `--s-6 + --s-7` = 80px clears it at every
+   width. */
 .audioToggle {
   position: fixed;
   right: var(--s-6);
-  bottom: var(--s-6);
+  bottom: calc(var(--s-6) + var(--s-7));
   z-index: calc(var(--z-hud) + 2);
 }
 
 @media (max-width: 900px) {
   .audioToggle {
     right: var(--s-4);
-    bottom: var(--s-4);
+    bottom: calc(var(--s-4) + var(--s-7));
   }
 }

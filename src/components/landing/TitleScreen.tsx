@@ -8,6 +8,7 @@ import { CornerBracket } from "@/components/ui/CornerBracket";
 import { GameShell } from "@/components/shell/Shell";
 import { SceneSequence } from "@/components/transition/SceneSequence";
 import { MISSIONS, SEQUENCE_SCENES, TITLE_ART } from "@/data/missions";
+import { audio } from "@/lib/audio";
 import { cameraPush, fadeIn, riseIn, staggerContainer } from "@/lib/motion";
 import styles from "./TitleScreen.module.css";
 
@@ -38,7 +39,28 @@ export function TitleScreen() {
     // of defence rather than the only one.
     if (started.current) return;
     started.current = true;
+    // The keyboard path does not necessarily fire the pointer gesture the arm
+    // listener waits on, so the theme is asked for explicitly here too.
+    audio()?.startMusic();
     setSequencing(true);
+  }, []);
+
+  /**
+   * Arm the theme on load (§34).
+   *
+   * "Plays from the home page" and the browser autoplay policy are in direct
+   * conflict: an AudioContext cannot start, and an <audio> element cannot play,
+   * before a real gesture. So the engine is armed here — on mount, before any
+   * interaction — and the track begins on the player's first click or keypress,
+   * which on this screen is also how they start the game. That is the earliest
+   * moment the platform permits, and it means the music is already running by
+   * the time the scene sequence begins rather than fading in behind it.
+   *
+   * `startMusic` is idempotent, so the explicit call in `start` below is a
+   * belt-and-braces path for the keyboard case rather than a second start.
+   */
+  useEffect(() => {
+    audio()?.startMusic();
   }, []);
 
   /**
@@ -88,7 +110,7 @@ export function TitleScreen() {
    */
 
   return (
-    <GameShell scanlines={false}>
+    <GameShell scanlines={false} audio>
       <motion.main
         className={styles.stage}
         initial="hidden"

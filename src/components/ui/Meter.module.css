@@ -1,0 +1,136 @@
+/* METERS AND FIGURES — the result screen's visual encoding.
+
+   Flat, hairline-weighted, and read at a glance. Two rules this file exists to
+   hold:
+
+   1. THE VALUE IS ENCODED TWICE — as a length (the bar) and as a number. One
+      alone is worse: a number needs arithmetic to compare, and a bar alone
+      cannot be cited. The reference implementation makes the same call.
+   2. THE THRESHOLD IS DRAWN, NOT SUGGESTED. The marks are the game's own bands,
+      ruled onto the track, and they are the only place a second colour appears.
+      A gauge whose line is invisible is a gauge that cannot be lost against.   */
+
+.track {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: var(--c-surface-1);
+  border: var(--rule) solid var(--c-line);
+}
+
+/* Divisions, every 10%. Faint enough to be felt rather than read. */
+.ticks {
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    to right,
+    transparent 0 calc(10% - 1px),
+    var(--c-line) calc(10% - 1px) 10%
+  );
+  opacity: 0.7;
+}
+
+.fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: var(--c-paper);
+}
+
+.track[data-tone="accent"] .fill {
+  background: var(--c-accent);
+}
+
+.track[data-tone="amber"] .fill {
+  background: var(--c-amber);
+}
+
+/* A threshold, ruled the full height of the track. Coral over any tone, because
+   it means "here is the line", not "here is a value". */
+.mark {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--c-accent);
+  box-shadow: 0 0 0 1px rgba(9, 10, 12, 0.55);
+}
+
+/* --- a labelled figure ---------------------------------------------------- */
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.rowHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-4);
+}
+
+.rowLabel {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: var(--track-meta);
+  text-transform: uppercase;
+  color: var(--c-muted);
+}
+
+.rowValue {
+  font-family: var(--font-display);
+  font-variation-settings: "wdth" var(--wdth-display), "wght" 700;
+  font-size: clamp(22px, 2.2vw, 30px);
+  line-height: 1;
+  letter-spacing: var(--track-display);
+  /* Tabular figures: a counting number must not change width as it climbs, or
+     the whole row jitters sideways for 900ms. */
+  font-variant-numeric: tabular-nums;
+  color: var(--c-paper);
+}
+
+.rowCaption {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: var(--track-meta);
+  text-transform: uppercase;
+  color: var(--c-muted);
+}
+
+/* --- a bare measured fact ------------------------------------------------- */
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.figureLabel {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: var(--track-meta);
+  text-transform: uppercase;
+  color: var(--c-muted);
+}
+
+.figureValue {
+  font-family: var(--font-display);
+  font-variation-settings: "wdth" var(--wdth-display), "wght" 700;
+  font-size: clamp(26px, 2.8vw, 38px);
+  line-height: 1;
+  letter-spacing: var(--track-display);
+  font-variant-numeric: tabular-nums;
+  color: var(--c-paper);
+}
+
+.figureUnit {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: var(--track-meta);
+  text-transform: uppercase;
+  color: var(--c-muted);
+}

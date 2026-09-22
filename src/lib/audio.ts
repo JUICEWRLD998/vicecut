@@ -5,25 +5,28 @@
  * transition, one mission-completion sound — low volume, never overwhelming, and
  * the application must stay fully functional with audio off.
  *
- * Generated with Web Audio rather than shipped as files, and that is the
- * decisive choice here. Three reasons, in order of weight:
+ * Two layers, built differently on purpose:
  *
- *  1. No assets. A four-stem bed plus four cues would be five binaries to source,
- *     licence and keep in sync with the brief's "do not use a loud soundtrack"
- *     rule. Noise and tones are a few dozen lines and cannot drift out of date.
- *  2. The radio squelch has to sit UNDER narration at a level that changes per
- *     scene. A generated burst is a parameter; a file is a fixed loudness.
- *  3. It cannot block anything. There is no fetch, so there is no loading state
- *     and no failure mode where silence becomes a spinner.
+ *  1. THE BED is a real music track, streamed from /public and routed through Web
+ *     Audio (`createMediaElementSource` -> low-pass -> gain) rather than decoded
+ *     into an AudioBuffer. That matters for a full-length track: a media-element
+ *     source streams progressively and is fetched once, where `decodeAudioData`
+ *     would have to download the whole file and hold all of it in memory before
+ *     the first note. It also gives the filter a live node to move, which is what
+ *     `setTension` below is for.
  *
- * Every sound here is deliberately quiet and low-passed. The brief's rule is that
- * audio is atmosphere, not content — if a judge notices the soundtrack, it is
- * wrong. The bed sits around -26dB and the loudest cue peaks near -18dB.
+ *  2. THE CUES are synthesised, because they cannot be assets. The radio squelch
+ *     has to sit UNDER narration at a level that changes per scene; a generated
+ *     burst is a parameter where a file is a fixed loudness. And there is no
+ *     fetch, so there is no loading state and no failure mode where a missing
+ *     file turns a cue into a silence you cannot distinguish from a bug.
  *
- * The engine is a module singleton created lazily on the first user gesture,
- * because browsers refuse to start an AudioContext without one. Nothing in the
- * app awaits it: every entry point is fire-and-forget, so a browser that blocks
- * or lacks Web Audio simply runs silent.
+ * The engine is a module singleton. The AudioContext is created on the first
+ * user gesture, because browsers refuse to start one without it, and music is
+ * armed on that same gesture — so the track begins on the first click anywhere,
+ * including on the title screen. Nothing in the app awaits it: every entry point
+ * is fire-and-forget, so a browser that blocks or lacks Web Audio runs silent
+ * rather than breaking.
  */
 
 type Cue =
@@ -38,16 +41,80 @@ type Cue =
 
 const MUTE_KEY = "vicecut.audio.muted";
 
+/**
+ * The bed, and its licence.
+ *
+ * "Neon Laser Horizon" — Kevin MacLeod (incompetech.com), 2020, album "Project
+ * 80s", ISRC USUAN2000023. Chosen for the register: a neon synthwave bed is what
+ * this fiction sounds like, and the brief's "do not use a loud soundtrack" rule
+ * wants a track that can sit under dialogue without fighting it.
+ *
+ * CC BY 4.0, which means attribution is REQUIRED, not requested. CC BY asks for
+ * credit "reasonable to the medium", and for a web app the deployed page is the
+ * medium — a line in the README does not satisfy it. So the credit is rendered
+ * on screen: `MusicCredit` puts it at the foot of the mission result, the last
+ * screen of a run and the one place with nothing competing for attention. If you
+ * want the credit to disappear, the fix is to swap this for a CC0 track rather
+ * than to delete the line — CC0 waives attribution entirely, and then the
+ * component renders nothing.
+ *
+ * THIS OBJECT IS THE SINGLE SOURCE OF TRUTH. Swapping the track means editing it
+ * and dropping the file at `src`, and nothing else: the credit, the download
+ * path and the filter settings all read from here.
+ */
+export const MUSIC = {
+  /** Served from /public. Streamed, and only ever fetched once the player clicks. */
+  src: "/audio/theme.mp3",
+  title: "Neon Laser Horizon",
+  artist: "Kevin MacLeod",
+  artistUrl: "https://incompetech.com",
+  license: "CC BY 4.0",
+  licenseUrl: "https://creativecommons.org/licenses/by/4.0/",
+} as const;
+
+/**
+ * Whether a credit is required for the track above.
+ *
+ * Returns null when there is nothing to say — a track with no artist and no
+ * licence renders no credit rather than an empty one. That is the honest answer
+ * for a CC0 file, and it means swapping to one removes the line automatically
+ * instead of leaving a stale credit claiming someone's work.
+ */
+export function musicCredit(): {
+  title: string;
+  artist: string;
+  artistUrl: string;
+  license: string;
+  licenseUrl: string;
+} | null {
+  if (!MUSIC.artist || !MUSIC.license) return null;
+  return {
+    title: MUSIC.title,
+    artist: MUSIC.artist,
+    artistUrl: MUSIC.artistUrl,
+    license: MUSIC.license,
+    licenseUrl: MUSIC.licenseUrl,
+  };
+}
+
+interface MusicNodes {
+  el: HTMLAudioElement;
+  source: MediaElementAudioSourceNode;
+  filter: BiquadFilterNode;
+  gain: GainNode;
+}
+
 class Cine {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
-  private bedGain: GainNode | null = null;
-  private bed: AudioBufferSourceNode | null = null;
   private noise: AudioBuffer | null = null;
+  private music: MusicNodes | null = null;
 
   private muted = false;
   private started = false;
-  /** Consumers that want to re-render when mute changes, e.g. the toggle. */
+  /** True once something has asked for the bed, so arming is idempotent. */
+  private musicWanted = false;
+  /** Listeners that want to re-render when mute changes, e.g. the toggle. */
   private listeners = new Set<() => void>();
 
   constructor() {
@@ -123,6 +190,11 @@ class Cine {
       // Autoplay policy: a context created before the gesture is allowed to
       // exist but starts suspended, so resume on the same gesture.
       if (ctx.state === "suspended") void ctx.resume();
+
+      // If the bed was requested before the context existed, attach it now —
+      // still inside the gesture that created the context, which is the only
+      // moment `play()` is guaranteed to be allowed.
+      if (this.musicWanted) this.attachMusic();
       return true;
     } catch {
       this.ctx = null;
@@ -132,73 +204,114 @@ class Cine {
   }
 
   /**
-   * Start the ambience bed. One continuous, very quiet layer for the whole
-   * mission — the room tone under a scene. Called once; further calls are no-ops.
+   * Start the bed. Safe to call from anywhere, at any time, any number of times.
+   *
+   * Armed rather than played: if the context does not exist yet — i.e. no gesture
+   * has happened — this registers a one-time gesture listener and starts on the
+   * first click or keypress. That is what makes the track "play from the home
+   * page" without fighting the autoplay policy, and it means a judge who deep
+   * links straight into a mission still gets music from their own first click.
+   *
+   * The listener lives here rather than at the call site because every caller
+   * would otherwise need to reimplement the same arming.
    */
-  startBed() {
-    if (!this.ctx || !this.master || !this.noise || this.bedGain) return;
-    const ctx = this.ctx;
+  startMusic() {
+    if (this.musicWanted) {
+      // Already armed or playing. Resuming covers a tab that was backgrounded —
+      // the browser suspends the element and nothing restarts it.
+      if (this.music) void this.music.el.play().catch(() => {});
+      return;
+    }
+    this.musicWanted = true;
 
-    const bedGain = ctx.createGain();
-    bedGain.gain.value = 0;
-    bedGain.connect(this.master);
+    if (this.ctx) {
+      this.attachMusic();
+      return;
+    }
 
-    // Two layers: a low rumble and a thin high "air". Together they read as a
-    // space rather than as a tone, which is the difference between room tone and
-    // a synth pad.
-    const low = ctx.createBiquadFilter();
-    low.type = "lowpass";
-    low.frequency.value = 320;
-    low.Q.value = 0.6;
-    low.connect(bedGain);
-
-    const air = ctx.createBiquadFilter();
-    air.type = "bandpass";
-    air.frequency.value = 1400;
-    air.Q.value = 0.5;
-    const airGain = ctx.createGain();
-    airGain.gain.value = 0.18;
-    air.connect(airGain);
-    airGain.connect(bedGain);
-
-    const source = ctx.createBufferSource();
-    source.buffer = this.noise;
-    source.loop = true;
-    source.connect(low);
-    source.connect(air);
-    source.start();
-
-    // Slow drift on the low-pass, so the bed breathes instead of sitting still.
-    // 0.06Hz is well below anything perceived as a rhythm.
-    const lfo = ctx.createOscillator();
-    lfo.frequency.value = 0.06;
-    const lfoGain = ctx.createGain();
-    lfoGain.gain.value = 90;
-    lfo.connect(lfoGain);
-    lfoGain.connect(low.frequency);
-    lfo.start();
-
-    bedGain.gain.setTargetAtTime(0.5, ctx.currentTime, 1.2);
-    this.bedGain = bedGain;
-    this.bed = source;
+    const arm = () => {
+      window.removeEventListener("pointerdown", arm);
+      window.removeEventListener("keydown", arm);
+      // No explicit unlock() here: attachMusic runs from unlock(), and calling
+      // it separately would race the two on the same gesture.
+      this.unlock();
+    };
+    window.addEventListener("pointerdown", arm);
+    window.addEventListener("keydown", arm);
   }
 
-  stopBed() {
-    if (!this.ctx || !this.bedGain || !this.bed) return;
-    const t = this.ctx.currentTime;
-    this.bedGain.gain.setTargetAtTime(0, t, 0.25);
-    const source = this.bed;
-    const gain = this.bedGain;
-    this.bed = null;
-    this.bedGain = null;
-    window.setTimeout(() => {
-      try {
-        source.stop();
-        gain.disconnect();
-      } catch {
-        /* already stopped */
-      }
-    }, 1400);
+  /** Build or resume the media-element graph. Requires a live context. */
+  private attachMusic() {
+    if (!this.ctx || !this.master) return;
+    const ctx = this.ctx;
+
+    if (this.music) {
+      void this.music.el.play().catch(() => {});
+      return;
+    }
+
+    try {
+      const el = new Audio();
+      el.src = MUSIC.src;
+      el.loop = true;
+      // Kept out of the DOM but still playing; a detached media element is a
+      // supported source and this keeps the shell markup free of audio tags.
+      el.preload = "auto";
+
+      // Same-origin (served from /public), so the element source gets real
+      // samples rather than silence. The routing is the point: it puts the track
+      // behind a low-pass we can open up as the mission tightens, instead of
+      // committing to one fixed mix.
+      const source = ctx.createMediaElementSource(el);
+      const filter = ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.value = 2600;
+      filter.Q.value = 0.4;
+
+      const gain = ctx.createGain();
+      gain.gain.value = 0.32;
+
+      source.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.master);
+
+      // A dead file must degrade to silence, not to a console full of errors.
+      el.addEventListener("error", () => {
+        this.music = null;
+      });
+
+      this.music = { el, source, filter, gain };
+      void el.play().catch(() => {
+        // Blocked or interrupted: a later `startMusic()` resumes it.
+      });
+    } catch {
+      this.music = null;
+    }
+  }
+
+  pauseMusic() {
+    this.music?.el.pause();
+  }
+
+  /**
+   * Open the mix as the mission heats up: one track, filtered, rather than a
+   * second track crossfaded in. `t` runs 0 (title) to 1 (the result landing).
+   *
+   * 2600 -> 16000Hz and 0.32 -> 0.5 is a deliberately narrow range. The brief's
+   * rule is that audio is atmosphere, not content: if a judge notices the
+   * soundtrack moving, it is too much.
+   */
+  setTension(t: number) {
+    if (!this.ctx || !this.music) return;
+    const clamped = Math.max(0, Math.min(1, t));
+    const now = this.ctx.currentTime;
+    this.music.filter.frequency.setTargetAtTime(2600 + clamped * 13400, now, 0.6);
+    this.music.gain.gain.setTargetAtTime(0.32 + clamped * 0.18, now, 0.6);
+  }
+
+  /** True once the bed is actually playing — lets a caller avoid double-starts. */
+  isMusicLive() {
+    return this.music !== null && !this.music.el.paused;
   }
 
   /** Fire a one-shot. No-op when unmuted audio was never unlocked. */

@@ -1,0 +1,47 @@
+/* THE MUSIC CREDIT.
+   Quiet by design: it is a legal obligation, not a design element, and a credit
+   that shouts is worse than one that sits still. Muted text at the smallest
+   metadata size, one step below the smallest thing the result screen uses for
+   its own content, so it reads as a footnote to the page rather than as a line
+   of the report. */
+
+.credit {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.6;
+  letter-spacing: 0.04em;
+  color: var(--c-muted);
+}
+
+.label {
+  text-transform: uppercase;
+  letter-spacing: var(--track-meta);
+  color: var(--c-muted);
+}
+
+.title {
+  color: var(--c-muted-hi);
+}
+
+/* Links carry a hairline underline rather than the accent colour: the accent
+   means "this is the action" everywhere else in the product, and a credit is
+   never the thing the user is meant to click. --c-muted-hi on the base measures
+   8.29:1, so it is legible without borrowing the accent's emphasis. */
+.link {
+  color: var(--c-muted-hi);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: var(--c-line-strong);
+  transition: color var(--t-ui) var(--ease-out);
+}
+
+.link:hover {
+  color: var(--c-paper);
+  text-decoration-color: var(--c-paper);
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--c-paper);
+  outline-offset: 2px;
+}

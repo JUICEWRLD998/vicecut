@@ -104,6 +104,32 @@ export type Briefing = {
    * than having no check at all.
    */
   target: { x: number; y: number; w: number; h: number };
+  /**
+   * What the target region IS, in words, shown in the editor while the player
+   * is choosing where to mark.
+   *
+   * Added because the region was invisible on the way in and decisive on the way
+   * out: the player was graded against a rect they had never been shown, so a
+   * miss read as a scoring bug rather than as a miss. This names the thing in
+   * the fiction's own terms — not coordinates, which would turn art direction
+   * into a targeting exercise, but "the burning car, left of centre", which is
+   * what a director would actually be told.
+   */
+  momentHint: string;
+  /**
+   * What the target region is CALLED on the result plate.
+   *
+   * Per mission, because "the moment" is mission 01's word and only mission 01's.
+   * The plate hardcoded it, so Southbound — whose brief says "frame the escape" —
+   * captioned its target "THE MOMENT" and told a player who hit it that their
+   * mark "landed in the moment". Two screens out of three were answering in the
+   * first mission's vocabulary, which is exactly the failure Phase 7 exists to
+   * prevent: a different scene answering with the same words.
+   *
+   * Short, and it has to be: it is a tag drawn inside the frame at 10px, not a
+   * sentence. Two words is the ceiling.
+   */
+  targetLabel: string;
   /** What the clip is showing, for the objective line over the freeze. */
   beat: string;
 };
@@ -238,6 +264,8 @@ export const MISSIONS: readonly Mission[] = [
       ],
       holdMs: 1500,
       target: { x: 0.351, y: 0.542, w: 0.36, h: 0.36 },
+      momentHint: "The burning car. Left of centre, low in frame.",
+      targetLabel: "The moment",
       beat: "The meet is compromised.",
     },
     /* Annotation-led: mark it, label it, grade it, finish it. `resize` is the
@@ -311,6 +339,8 @@ export const MISSIONS: readonly Mission[] = [
       ],
       holdMs: 1500,
       target: { x: 0.22, y: 0.22, w: 0.36, h: 0.36 },
+      momentHint: "Jason at the wheel. Upper left of frame.",
+      targetLabel: "The car",
       beat: "The driver pulls away.",
     },
     /* Framing-led, per §11 — the brief calls this the scene that "should
@@ -389,6 +419,8 @@ export const MISSIONS: readonly Mission[] = [
       ],
       holdMs: 1500,
       target: { x: 0.164, y: 0.209, w: 0.36, h: 0.36 },
+      momentHint: "The motel sign. Upper left of frame.",
+      targetLabel: "The target",
       beat: "Someone is watching.",
     },
     /* Obstruction-led: censor bars, blackout strokes, redaction, and a grade to

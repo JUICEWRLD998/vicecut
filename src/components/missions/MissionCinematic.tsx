@@ -5,12 +5,14 @@ import { motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/Button";
 import { CornerBracket } from "@/components/ui/CornerBracket";
 import { Display, Metadata, Prose } from "@/components/ui/Typography";
-import { Debrief, requestQuestions } from "@/components/missions/Debrief";
+import { CutComparison } from "@/components/missions/CutComparison";
+import { MeasuredReadout, ScorePanel, SlateStrip } from "@/components/missions/MissionOutcome";
+import { MusicCredit } from "@/components/ui/MusicCredit";
+import { Stamp } from "@/components/ui/Stamp";
 import { audio } from "@/lib/audio";
 import {
   analyseFrame,
   classifyEdit,
-  directorRep,
   directorScore,
   takeNumber,
   type FrameReport,
@@ -232,7 +234,10 @@ export function MissionCinematic({
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
-      if (!reached("compare")) return;
+      // Gated on the result too: the scrub layer unmounts at that beat, but the
+      // stage-level handlers below would otherwise still answer a pointer that
+      // reached them, moving a divider nobody can see.
+      if (!reached("compare") || reached("result")) return;
       setDragging(true);
       setFromClientX(e.clientX);
     },
@@ -267,18 +272,21 @@ export function MissionCinematic({
   }, []);
 
   /**
-   * The ambience bed, and the cues that mark each beat (§34).
+   * The theme, and the cues that mark each beat (§34).
    *
    * One effect keyed on `phase` rather than a cue per beat timer: the phase IS
    * the beat, so a cue can never fire out of step with the thing it marks. The
-   * bed restarts here because the briefing clip stopped its own on the way out,
-   * and the mission should not fall silent between the two.
+   * music is not restarted here — it has been running since the title screen —
+   * this only asks for it in case a deep link skipped that screen.
    */
   useEffect(() => {
     if (!sound) return;
     sound.unlock();
-    sound.startBed();
-    return () => sound.stopBed();
+    sound.startMusic();
+    // The mix opens with the sequence: the result is the loudest point the
+    // soundtrack reaches, and it gets there by widening the filter rather than
+    // by adding a second track.
+    sound.setTension(0.75);
   }, [sound]);
 
   useEffect(() => {
@@ -286,51 +294,16 @@ export function MissionCinematic({
     // A squelch when the radio beat lands, so the transmission is heard as a
     // transmission rather than only read as a line of text.
     if (phase === "radio") sound.cue("radioIn");
-    // The completion sound, on the result (§34's "mission completion").
-    if (phase === "result") sound.cue("confirm");
+    // The completion sound, on the result (§34's "mission completion"), and the
+    // mix opening the rest of the way under it.
+    if (phase === "result") {
+      sound.cue("confirm");
+      sound.setTension(1);
+    }
   }, [phase, sound]);
-
-  /**
-   * Pre-warm the AI debrief, as soon as the frame has been measured.
-   *
-   * This is what makes the feature actually land on screen. The panel used to
-   * start its own request when the result beat arrived at 8s, so the questions
-   * appeared around 13s after LOCK FRAME — by which time a judge scrolling a
-   * finished mission had already moved on. Measured: a full mission could be
-   * completed with the feature never seen.
-   *
-   * Firing here means the request is in hand roughly 7s before it is needed, and
-   * `requestQuestions` caches per scene so the panel reads the same promise
-   * rather than issuing a second call. The model sees the same measurements
-   * either way — the only thing that moved is WHEN we asked.
-   */
-  useEffect(() => {
-    if (!measured || !report) return;
-    void requestQuestions({
-      mission: {
-        name: mission.name,
-        location: mission.location,
-        instruction: mission.instruction,
-        objective: mission.objective,
-        radio: mission.radio,
-      },
-      report: {
-        coverage: report.coverage,
-        spread: report.spread,
-        onTarget: report.onTarget,
-        onTargetShare: report.onTargetShare,
-        edited: report.edited,
-        format: report.format,
-      },
-      verdict: editLabel(report, mission.slate.verdict),
-      score: directorScore(report),
-    });
-  }, [measured, mission, report]);
 
   const take = takeNumber(report);
   const score = report ? directorScore(report) : null;
-  const rep = score ? directorRep(score) : 0;
-
   return (
     <div
       ref={stageRef}
@@ -349,8 +322,16 @@ export function MissionCinematic({
       <div className={styles.frames}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img className={styles.frame} src={frame.dataUrl} alt={`Locked frame for ${mission.name}`} />
-        {/* §21 — the original, wiped in beside the cut. */}
-        {reached("compare") ? (
+        {/* §21 — the original, wiped in beside the cut.
+            RETIRES AT THE RESULT. It used to stay mounted underneath the result
+            panel, which has no background of its own, so at the result beat the
+            divider drew a hard accent line straight down the middle of the page
+            and split the locked frame — and the labels that explain it were
+            already hidden. On an untouched frame the two halves are identical,
+            so it read as a rendering fault rather than as a comparison. The
+            comparison is a beat, not a background: it plays, and then the result
+            REPLACES it, carrying its own framed comparison in the document. */}
+        {reached("compare") && !reached("result") ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             className={styles.original}
@@ -476,8 +457,13 @@ export function MissionCinematic({
       {/* The divider. Keyboard-focusable so it is reachable by Tab and operable
           with arrows, per the same rule the rest of the product follows: a
           control a judge cannot reach is not a control. pointer-events are off,
-          so a drag passes through to the scrub layer beneath it. */}
-      {reached("compare") ? (
+          so a drag passes through to the scrub layer beneath it.
+
+          Retires with the comparison. Its own drag and key handlers are also
+          gated on the result, so this is the visual half of that rule rather
+          than the only half — a divider left mounted here would sit over the
+          result document with nothing left to scrub. */}
+      {reached("compare") && !reached("result") ? (
         <div
           className={styles.divider}
           style={{ left: `${divider}%` }}
@@ -502,7 +488,12 @@ export function MissionCinematic({
           initial="hidden"
           animate="visible"
         >
-          <div className={styles.main}>
+          {/* The masthead spans the full document width and sits directly in the
+              grid, above the plate. It used to be nested inside the left column,
+              which only works while nothing else needs the width — the comparison
+              does, so the masthead became its own row rather than the plate being
+              demoted to fit beneath it. */}
+          <div className={styles.masthead}>
           <motion.div className={styles.resultHead} variants={fadeIn}>
             <Metadata tone="accent">Director&rsquo;s cut</Metadata>
             <Metadata>
@@ -522,153 +513,110 @@ export function MissionCinematic({
             <Metadata tone="paper">Scene directed</Metadata>
             <Metadata tone="paper">Mission rolled</Metadata>
           </motion.div>
-
-          {/* --- the measured readout ---------------------------------------
-              Every value is computed from the locked frame's pixels. The headline
-              is the KIND of edit rather than the coverage percentage, because
-              coverage as a headline misreports the annotation missions: an X
-              drawn across a frame alters ~0.4% of its area, so leading with
-              "0.4%" tells a player who just did something dramatic that nothing
-              happened. */}
-          <motion.div variants={riseIn} className={styles.measured}>
-            {measured && report ? (
-              <>
-                <p className={styles.figureHeadline}>
-                  {editLabel(report, mission.slate.verdict)}
-                </p>
-
-                {mission.briefing ? (
-                  <div className={styles.check} data-pass={report.onTarget}>
-                    <Metadata className={styles.checkLabel}>
-                      {report.onTarget ? "Mark on target" : "Mark off target"}
-                    </Metadata>
-                    <Metadata className={styles.checkNote}>
-                      {`${report.onTargetShare}% of the mark inside the moment`}
-                    </Metadata>
-                  </div>
-                ) : null}
-
-                <dl className={styles.readout}>
-                  <div className={styles.cell}>
-                    <dt>
-                      <Metadata>Altered</Metadata>
-                    </dt>
-                    <dd className={styles.figure}>{`${report.coverage}%`}</dd>
-                    <dd>
-                      <Metadata className={styles.cellNote}>of the frame</Metadata>
-                    </dd>
-                  </div>
-                  <div className={styles.cell}>
-                    <dt>
-                      <Metadata>Spread</Metadata>
-                    </dt>
-                    <dd className={styles.figure}>{`${report.spread}%`}</dd>
-                    <dd>
-                      <Metadata className={styles.cellNote}>reached globally</Metadata>
-                    </dd>
-                  </div>
-                  <div className={styles.cell}>
-                    <dt>
-                      <Metadata>Print</Metadata>
-                    </dt>
-                    <dd className={styles.figure}>{report.format}</dd>
-                    <dd>
-                      <Metadata className={styles.cellNote}>
-                        {`${report.width}×${report.height}`}
-                      </Metadata>
-                    </dd>
-                  </div>
-                </dl>
-              </>
-            ) : measured ? (
-              <Metadata className={styles.cellNote}>
-                The frame could not be compared against the original scene.
-              </Metadata>
-            ) : (
-              <div className={styles.readoutPending} aria-hidden="true" />
-            )}
-          </motion.div>
-
-          {/* --- §20 director score ------------------------------------------
-              Deterministic game metrics derived from the measurements above, not
-              an AI judgement — §20 is explicit, and the label says so on screen
-              rather than only in a comment. Each one moves when the edit moves,
-              which is what makes them read as feedback. */}
-          {score ? (
-            <motion.div variants={riseIn} className={styles.score}>
-              <Metadata className={styles.scoreLabel}>Director score</Metadata>
-              <dl className={styles.scoreGrid}>
-                {(
-                  [
-                    ["Framing", score.framing],
-                    ["Composition", score.composition],
-                    ["Control", score.control],
-                  ] as const
-                ).map(([label, value]) => (
-                  <div key={label} className={styles.scoreCell}>
-                    <dt>
-                      <Metadata>{label}</Metadata>
-                    </dt>
-                    <dd className={styles.scoreFigure}>{value}</dd>
-                  </div>
-                ))}
-                <div className={`${styles.scoreCell} ${styles.scoreFinal}`}>
-                  <dt>
-                    <Metadata tone="accent">Final cut</Metadata>
-                  </dt>
-                  <dd className={`${styles.scoreFigure} ${styles.scoreFinalFigure}`}>
-                    {score.final}
-                  </dd>
-                </div>
-              </dl>
-              <Metadata className={styles.scoreNote}>
-                {`Game metrics derived from this frame · Director rep +${rep}`}
-              </Metadata>
-            </motion.div>
-          ) : null}
           </div>
 
-          {/* --- the AI debrief ---------------------------------------------
-              In the SIDE COLUMN on wide screens, and that placement is the fix
-              for a real bug rather than a style choice. Stacked, the result
-              panel's content measured 1603px inside a 900px box, which put the
-              questions at y 818..984 — below the fold. A judge who completed a
-              mission and did not scroll never saw the feature at all. In the
-              side column the questions sit near the top of the panel and are
-              visible alongside the score.
+          {/* --- the slate (§11/§20) -------------------------------------------
+              The shot record, and the thing that makes the three missions read as
+              three different operations rather than one screen reskinned. Phase 7
+              asks for a distinct CINEMATIC treatment per scene, and this is where
+              that lands: the data was already authored per mission (`slate.framing`,
+              `slate.genre`, `slate.process`) and nothing rendered the first three
+              fields, so every result answered with identical words.
 
-              Entirely self-contained: it never gates the result, and renders
-              nothing at all when it cannot reach a model. The demo's core loop
-              must not depend on a network call, so this is an extra and never a
-              step. */}
-          <motion.aside className={styles.side} variants={riseIn}>
-            <Debrief
-              // Remount per mission, so the panel starts clean for a new scene
-              // rather than resetting its own state on the way in.
-              key={mission.name}
-              mission={{
-                name: mission.name,
-                location: mission.location,
-                instruction: mission.instruction,
-                objective: mission.objective,
-                radio: mission.radio,
-              }}
-              report={
-                report
-                  ? {
-                      coverage: report.coverage,
-                      spread: report.spread,
-                      onTarget: report.onTarget,
-                      onTargetShare: report.onTargetShare,
-                      edited: report.edited,
-                      format: report.format,
-                    }
-                  : null
-              }
-              verdict={report ? editLabel(report, mission.slate.verdict) : null}
-              score={score ? { framing: score.framing, composition: score.composition, control: score.control, final: score.final } : null}
-            />
-          </motion.aside>
+              After the masthead in the DOM as well as below it on the grid. The
+              two have to agree: a block placed visually beneath the title but
+              earlier in the markup is read out of order by a screen reader, and
+              the document would describe the shot before naming the scene.
+              Wrapped so it can be placed on this grid — the component's own styles
+              come from its own module and cannot carry these class names. */}
+          <div className={styles.slateRow}>
+            <SlateStrip mission={mission} />
+          </div>
+
+          {/* --- the verdict -------------------------------------------------
+              Its own row, directly above the plate it describes, and the loudest
+              thing on the screen. The headline is the KIND of edit rather than
+              the coverage percentage, because coverage as a headline misreports
+              the annotation missions: an X drawn across a frame alters ~0.4% of
+              its area, so leading with "0.4%" tells a player who just did
+              something dramatic that nothing happened.
+
+              Struck rather than set as type — see Stamp. The word comes from the
+              mission's own brief, so the verdict answers in the vocabulary the
+              player was given: MARKED for the scene that says "mark the moment",
+              REDACTED for the one that says "obscure the target".
+
+              The unmarked case gets the muted tone and zero rotation. A frame
+              with no direction in it is a miss, not an error, and a red stamp
+              would make a legitimate play read as a failure of the demo. */}
+          {measured && report ? (
+            <motion.div variants={riseIn} className={styles.verdict}>
+              <Stamp
+                tone={report.edited ? "accent" : "muted"}
+                rotate={report.edited ? -4 : 0}
+                delayMs={220}
+              >
+                {editLabel(report, mission.slate.verdict)}
+              </Stamp>
+            </motion.div>
+          ) : null}
+
+          {/* --- §21 the comparison ------------------------------------------
+              Full document width, and that is a functional choice rather than a
+              compositional one.
+
+              It was inside the left column, where it rendered about 480px wide —
+              roughly a quarter of the frame the player had just been working on
+              at 4K. The thing this whole product is built around is the player
+              seeing their edit take effect, so the evidence for that has to be
+              the largest object on the screen, not a thumbnail beside the scores.
+
+              It also carries the answer key: the moment is boxed on the original
+              side, so "on target" stops being a verdict measured against a region
+              the player was never shown. */}
+          {measured && report ? (
+            <motion.div variants={riseIn} className={styles.plate}>
+              <CutComparison
+                originalSrc={editableFrame(mission)}
+                cutSrc={frame.dataUrl}
+                target={mission.briefing?.target}
+                targetLabel={mission.briefing?.targetLabel}
+                onTarget={report.onTarget}
+                onTargetShare={report.onTargetShare}
+                edited={report.edited}
+                missionName={mission.name}
+              />
+            </motion.div>
+          ) : null}
+
+          {/* --- §20 the outcome ----------------------------------------------
+              The measured facts and the Director Score, in their own panels.
+              Both live in MissionOutcome — see the note at the top of that file
+              for why the measurements and the scores are two blocks rather than
+              one: the first is a fact about the frame, the second is the game's
+              reading of it, and §20 forbids blurring the two. */}
+          <div className={styles.main}>
+            {measured && report ? <MeasuredReadout report={report} /> : null}
+
+            {measured && report && score ? (
+              <ScorePanel score={score} report={report} />
+            ) : measured ? (
+              /* No score, and it says why. `directorScore` returns null when the
+                 frame was locked without any direction, and printing three
+                 confident-looking numbers derived from nothing would be exactly
+                 the invented score §20 forbids. The plate above already carries
+                 the substantive message ("submitted the frame unmarked"); this
+                 states the consequence for the readout, so the missing panel
+                 reads as a decision rather than as a rendering failure. */
+              <motion.section className={styles.scoreEmpty} variants={riseIn}>
+                <Metadata tone="accent">Director score</Metadata>
+                <Metadata className={styles.scoreNote}>
+                  Not scored — the frame was locked as shot. Direct it and lock
+                  again to be graded.
+                </Metadata>
+              </motion.section>
+            ) : null}
+          </div>
 
           <motion.footer className={styles.foot} variants={fadeIn}>
             <div className={styles.actions}>
@@ -681,6 +629,11 @@ export function MissionCinematic({
                 </Button>
               ) : null}
             </div>
+            {/* The CC BY 4.0 obligation for the soundtrack, discharged on screen
+                rather than in the README — see MusicCredit. It renders nothing
+                when the bed needs no credit, so this line is not a permanent
+                fixture of the layout. */}
+            <MusicCredit />
           </motion.footer>
         </motion.div>
       ) : null}
